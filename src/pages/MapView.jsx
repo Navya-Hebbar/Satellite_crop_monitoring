@@ -2,9 +2,8 @@ import { motion } from 'framer-motion';
 import { Map as MapIcon, Shield, Info, Maximize, ZoomIn } from 'lucide-react';
 
 const MapView = () => {
-  // Using a sample Earth Engine app or a high-quality satellite map embed
-  // Note: Replace "GEE_APP_LINK" with an actual link if available.
-  const GEE_APP_LINK = "https://earthengine.google.com/iframes/timelapse_player_embed.html#v=12.9716,77.5946,10,latLng&t=3.54&l=skybox";
+  // User's specific Earth Engine App for NDVI monitoring
+  const GEE_APP_LINK = "https://datavisual-494214.projects.earthengine.app/view/dav-el";
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -96,9 +95,18 @@ const MapView = () => {
 
           <div className="glass p-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
             <h3 className="text-sm font-bold text-emerald-400 mb-2">Analysis Insight</h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Current spatial data indicates a high concentration of healthy vegetation in the northwest sector, while the southern regions show moderate stress potentially due to early summer heat.
+            <p className="text-sm text-slate-300 leading-relaxed mb-4">
+              Current spatial data indicates a high concentration of healthy vegetation in the northwest sector, while the southern regions show moderate stress.
             </p>
+            <div className="pt-4 border-t border-white/10">
+              <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-2">GEE Setup Guide</h4>
+              <ol className="text-[10px] text-slate-400 space-y-2 list-decimal ml-3">
+                <li>Write your NDVI script in GEE Code Editor.</li>
+                <li>Click <strong>Apps</strong> {">"} <strong>New App</strong>.</li>
+                <li>Publish as <strong>Public</strong>.</li>
+                <li>Copy the App URL into <code>MapView.jsx</code>.</li>
+              </ol>
+            </div>
           </div>
         </div>
       </div>
