@@ -10,6 +10,7 @@ const Header = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Dashboard', path: '/dashboard' },
+    { name: 'Spectral Lab', path: '/lab' },
     { name: 'Map View', path: '/map' },
     { name: 'Upload Data', path: '/upload' },
     { name: 'About', path: '/about' },

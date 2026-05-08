@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import MapView from './pages/MapView';
 import UploadData from './pages/UploadData';
 import About from './pages/About';
+import SpectralLab from './pages/SpectralLab';
 import { DataProvider } from './context/DataContext';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="lab" element={<SpectralLab />} />
             <Route path="map" element={<MapView />} />
             <Route path="upload" element={<UploadData />} />
             <Route path="about" element={<About />} />

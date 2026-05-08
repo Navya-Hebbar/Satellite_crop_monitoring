@@ -82,17 +82,27 @@ Export.table.toDrive({
           </motion.div>
 
           {/* Map */}
-          <div className="glass rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl relative">
+          <div className="glass rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl relative group">
+            {/* HUD Decoration */}
+            <div className="absolute top-4 left-4 w-10 h-10 border-t-2 border-l-2 border-emerald-500/50 rounded-tl-xl z-20 pointer-events-none" />
+            <div className="absolute top-4 right-4 w-10 h-10 border-t-2 border-r-2 border-emerald-500/50 rounded-tr-xl z-20 pointer-events-none" />
+            <div className="absolute bottom-4 left-4 w-10 h-10 border-b-2 border-l-2 border-emerald-500/50 rounded-bl-xl z-20 pointer-events-none" />
+            <div className="absolute bottom-4 right-4 w-10 h-10 border-b-2 border-r-2 border-emerald-500/50 rounded-br-xl z-20 pointer-events-none" />
+            
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur-md border border-emerald-500/30 px-4 py-1 rounded-full pointer-events-none flex items-center space-x-2">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-[0.2em]">Live Spectral Interface</span>
+            </div>
             <iframe 
               src={GEE_APP_LINK}
               width="100%" 
               height="600" 
-              className="border-none"
+              className="border-none relative z-10"
               title="Google Earth Engine Map"
               allowFullScreen
             ></iframe>
             
-            <div className="absolute bottom-6 left-6 p-4 glass rounded-xl border border-white/10 backdrop-blur-xl">
+            <div className="absolute bottom-6 left-6 p-4 glass rounded-xl border border-white/10 backdrop-blur-xl z-20">
               <h4 className="text-sm font-bold text-white mb-3 flex items-center">
                 <Shield className="w-4 h-4 mr-2 text-emerald-400" />
                 NDVI Health Legend
