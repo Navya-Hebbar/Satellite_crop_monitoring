@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  AreaChart, Area, BarChart, Bar, Cell, Legend
+  AreaChart, Area, Legend
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Activity, Map as MapIcon, 
@@ -10,6 +10,7 @@ import {
   ArrowUpRight, CheckCircle2, AlertCircle, Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import TacticalLog from '../components/TacticalLog';
 
 const KPICard = ({ title, value, subValue, icon: Icon, color }) => (
   <motion.div 
@@ -34,15 +35,20 @@ const KPICard = ({ title, value, subValue, icon: Icon, color }) => (
 
 const Dashboard = () => {
   const { 
-    data, allRegionsData, stats, selectedRegions, setSelectedRegions, 
-    allCities, seasonalTrends, loading 
+    data = [], 
+    allRegionsData = {}, 
+    stats = { avg: 0, max: 0, min: 0, currentStatus: 'N/A' }, 
+    selectedRegions = ['Bangalore'], 
+    setSelectedRegions, 
+    allCities = [], 
+    seasonalTrends = [], 
+    loading 
   } = useData();
-
-  const [activeTab, setActiveTab] = useState('overview');
 
   const addSlot = () => {
     if (selectedRegions.length < 5) {
-      setSelectedRegions([...selectedRegions, allCities.find(c => !selectedRegions.includes(c)) || allCities[0]]);
+      const nextCity = allCities.find(c => !selectedRegions.includes(c)) || allCities[0];
+      setSelectedRegions([...selectedRegions, nextCity]);
     }
   };
 
@@ -59,7 +65,7 @@ const Dashboard = () => {
   };
 
   const comparisonData = useMemo(() => {
-    if (selectedRegions.length === 0) return [];
+    if (!selectedRegions || selectedRegions.length === 0) return [];
     const firstRegion = selectedRegions[0];
     const baseData = allRegionsData[firstRegion] || [];
     
@@ -76,7 +82,7 @@ const Dashboard = () => {
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-  if (loading && Object.keys(allRegionsData).length === 0) {
+  if (loading && (!allRegionsData || Object.keys(allRegionsData).length === 0)) {
     return (
       <div className="h-[80vh] flex items-center justify-center">
         <div className="flex flex-col items-center">
@@ -234,10 +240,10 @@ const Dashboard = () => {
           <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar max-h-[400px]">
             {selectedRegions.map((city, idx) => {
               const regionData = allRegionsData[city] || [];
+              const total = regionData.length || 1;
               const healthyCount = regionData.filter(d => d.ndvi > 0.6).length;
               const moderateCount = regionData.filter(d => d.ndvi >= 0.3 && d.ndvi <= 0.6).length;
               const unhealthyCount = regionData.filter(d => d.ndvi < 0.3).length;
-              const total = regionData.length || 1;
 
               return (
                 <div key={city} className="space-y-2 p-3 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group">
@@ -250,20 +256,9 @@ const Dashboard = () => {
                     <motion.div initial={{ width: 0 }} animate={{ width: `${(moderateCount/total)*100}%` }} className="h-full bg-yellow-500" />
                     <motion.div initial={{ width: 0 }} animate={{ width: `${(unhealthyCount/total)*100}%` }} className="h-full bg-red-500" />
                   </div>
-                  <div className="flex justify-between text-[8px] font-black uppercase text-slate-500 tracking-wider">
-                    <span>Healthy: {Math.round((healthyCount/total)*100)}%</span>
-                    <span>Stress: {Math.round((unhealthyCount/total)*100)}%</span>
-                  </div>
                 </div>
               );
             })}
-          </div>
-
-          <div className="mt-8 p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 flex items-start space-x-3">
-            <Info className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-            <p className="text-[10px] text-slate-400 leading-relaxed italic">
-              Relative health comparison across selected sectors using multispectral indices.
-            </p>
           </div>
         </div>
       </div>
@@ -271,12 +266,10 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Seasonal Trends */}
         <div className="glass p-8 rounded-[2.5rem] border border-white/10">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-black text-white tracking-tight flex items-center">
-              <Calendar className="w-5 h-5 mr-2 text-emerald-400" />
-              Seasonal Performance
-            </h3>
-          </div>
+          <h3 className="text-xl font-black text-white mb-6 flex items-center">
+            <Calendar className="w-5 h-5 mr-2 text-emerald-400" />
+            Seasonal Performance
+          </h3>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={seasonalTrends}>
@@ -296,46 +289,59 @@ const Dashboard = () => {
             <Shield className="w-5 h-5 mr-2 text-emerald-400" />
             Actionable Intelligence
           </h3>
-          <div className="space-y-4 flex-1">
-             <div className="p-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start space-x-4">
-                <div className="mt-1 p-2 bg-emerald-500/20 rounded-lg">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                </div>
+          <div className="space-y-4">
+             <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start space-x-4">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-1" />
                 <div>
-                  <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Operational Sync</p>
-                  <p className="text-sm font-bold text-white">Multi-sector comparison for {selectedRegions.join(', ')} is live.</p>
-                  <p className="text-xs text-slate-500 mt-1">Data packets from GEE Bridge analyzed with 98.4% signal integrity.</p>
+                  <p className="text-sm font-bold text-white">System Synchronized</p>
+                  <p className="text-xs text-slate-500">Live feed active for {selectedRegions.length} sectors.</p>
                 </div>
              </div>
-             
-             {stats.avg < 0.5 ? (
-                <div className="p-5 rounded-2xl border border-red-500/20 bg-red-500/5 flex items-start space-x-4">
-                  <div className="mt-1 p-2 bg-red-500/20 rounded-lg">
-                    <AlertCircle className="w-5 h-5 text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] mb-1">Stress Alert</p>
-                    <p className="text-sm font-bold text-white">Critical health decline in primary sector.</p>
-                    <p className="text-xs text-slate-500 mt-1">NDVI drop suggests moisture deficiency or pest emergence.</p>
-                  </div>
-                </div>
-             ) : (
-                <div className="p-5 rounded-2xl border border-blue-500/20 bg-blue-500/5 flex items-start space-x-4">
-                  <div className="mt-1 p-2 bg-blue-500/20 rounded-lg">
-                    <TrendingUp className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Growth Index</p>
-                    <p className="text-sm font-bold text-white">Optimal vegetation recovery detected.</p>
-                    <p className="text-xs text-slate-500 mt-1">Spectral signatures match healthy chlorophyll levels.</p>
-                  </div>
-                </div>
-             )}
           </div>
-          <button className="mt-8 w-full py-4 bg-emerald-500 text-white rounded-2xl font-black hover:bg-emerald-600 transition-all shadow-[0_0_40px_rgba(16,185,129,0.2)]">
-            GENERATE FULL INTEL REPORT
-          </button>
         </div>
+      </div>
+
+      {/* Log Registry */}
+      <div className="glass rounded-[2.5rem] border border-white/10 overflow-hidden">
+        <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between bg-white/5">
+          <h3 className="text-xl font-black text-white uppercase tracking-tight">Spectral Log Registry</h3>
+          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Sector: {selectedRegions[0] || 'N/A'}</span>
+        </div>
+        <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+          <table className="w-full text-left">
+            <thead className="text-[10px] text-slate-500 uppercase tracking-[0.2em] bg-white/2 sticky top-0 z-10 backdrop-blur-md">
+              <tr>
+                <th className="px-8 py-5">Timestamp</th>
+                <th className="px-8 py-5">NDVI Index</th>
+                <th className="px-8 py-5">Status</th>
+                <th className="px-8 py-5 text-right">Trend</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5 font-mono text-[11px]">
+              {Array.isArray(data) && data.map((row, idx) => (
+                <tr key={idx} className="hover:bg-white/5 transition-colors">
+                  <td className="px-8 py-4 text-slate-400">{row.date}</td>
+                  <td className="px-8 py-4 text-white font-bold">{row.ndvi.toFixed(4)}</td>
+                  <td className="px-8 py-4">
+                    <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${
+                      row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' : 'border-red-500/20 text-red-400'
+                    }`}>
+                      {row.ndvi > 0.6 ? 'Healthy' : 'Stress'}
+                    </span>
+                  </td>
+                  <td className="px-8 py-4 text-right">
+                    {idx > 0 && data[idx-1].ndvi < row.ndvi ? <ArrowUpRight className="inline w-4 h-4 text-emerald-400" /> : <TrendingDown className="inline w-4 h-4 text-red-500/30" />}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Tactical Log */}
+      <div className="h-[300px]">
+        <TacticalLog />
       </div>
     </div>
   );
