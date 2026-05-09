@@ -7,41 +7,35 @@ const TacticalLog = () => {
     { id: 1, type: 'info', msg: 'System initialized. Orbit stable.' },
     { id: 2, type: 'success', msg: 'Sentinel-2 linkage established.' }
   ]);
-  const logEndRef = useRef(null);
-
-  const messages = [
-    'Scanning sector 4-Gamma...',
-    'Anomaly detected in NDVI variance.',
-    'Atmospheric correction: 0.02% adjustment.',
-    'Cloud mask applied to region Alpha.',
-    'Multispectral sync in progress...',
-    'Data packet 781-B received.',
-    'Signal strength at 98.4%',
-    'Infrared sensor recalibrated.',
-    'Heuristic health model: Update complete.',
-    'Spectral signature matched: CORN_FIELD_4.',
-    'Anomalous heat index detected in North sector.',
-    'Satellite telemetry: NOMINAL.'
-  ];
+  const logContainerRef = useRef(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
       const randomMsg = messages[Math.floor(Math.random() * messages.length)];
       const type = Math.random() > 0.8 ? 'warning' : Math.random() > 0.5 ? 'info' : 'success';
       
-      setLogs(prev => [...prev.slice(-14), { 
-        id: Date.now(), 
-        type, 
-        msg: randomMsg,
-        time: new Date().toLocaleTimeString([], { hour12: false }) 
-      }]);
+      setLogs(prev => {
+        const newLogs = [...prev, { 
+          id: Date.now(), 
+          type, 
+          msg: randomMsg,
+          time: new Date().toLocaleTimeString([], { hour12: false }) 
+        }];
+        return newLogs.slice(-14);
+      });
     }, 3000);
 
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (logContainerRef.current) {
+      const { scrollHeight, clientHeight } = logContainerRef.current;
+      logContainerRef.current.scrollTo({
+        top: scrollHeight - clientHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [logs]);
 
   return (
@@ -57,7 +51,7 @@ const TacticalLog = () => {
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 text-[10px] scrollbar-hide">
+      <div ref={logContainerRef} className="flex-1 overflow-y-auto p-4 space-y-2 text-[10px] scrollbar-hide">
         <AnimatePresence mode="popLayout">
           {logs.map((log) => (
             <motion.div
@@ -78,7 +72,6 @@ const TacticalLog = () => {
             </motion.div>
           ))}
         </AnimatePresence>
-        <div ref={logEndRef} />
       </div>
 
       <div className="p-3 bg-black/40 border-t border-white/5 grid grid-cols-3 gap-2">

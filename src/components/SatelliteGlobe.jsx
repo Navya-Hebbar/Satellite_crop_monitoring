@@ -32,11 +32,11 @@ const SatelliteGlobe = () => {
         {/* Core Globe */}
         <mesh ref={globeRef}>
           <sphereGeometry args={[2, 64, 64]} />
-          <meshStandardMaterial 
-            color="#064e3b" 
-            wireframe 
-            transparent 
-            opacity={0.4} 
+          <meshStandardMaterial
+            color="#064e3b"
+            wireframe
+            transparent
+            opacity={0.4}
             emissive="#10b981"
             emissiveIntensity={0.5}
           />
@@ -45,9 +45,9 @@ const SatelliteGlobe = () => {
         {/* Inner Solid Globe */}
         <mesh>
           <sphereGeometry args={[1.9, 64, 64]} />
-          <meshStandardMaterial 
-            color="#020617" 
-            transparent 
+          <meshStandardMaterial
+            color="#020617"
+            transparent
             opacity={0.8}
           />
         </mesh>
@@ -55,10 +55,10 @@ const SatelliteGlobe = () => {
         {/* Atmosphere/Clouds */}
         <mesh ref={atmosphereRef}>
           <sphereGeometry args={[2.2, 64, 64]} />
-          <meshStandardMaterial 
-            color="#10b981" 
-            wireframe 
-            transparent 
+          <meshStandardMaterial
+            color="#10b981"
+            wireframe
+            transparent
             opacity={0.1}
           />
         </mesh>
@@ -80,7 +80,7 @@ const SatelliteGlobe = () => {
 
 const SatelliteMarker = ({ index }) => {
   const satRef = useRef();
-  
+
   useFrame((state) => {
     const t = state.clock.getElapsedTime() + (index * 10);
     const radius = 3;

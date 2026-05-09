@@ -3,63 +3,62 @@ import { Target, Scan, Crosshair, Zap } from 'lucide-react';
 
 const ScannerHUD = () => {
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
       {/* Corner Brackets */}
-      <div className="absolute top-10 left-10 w-20 h-20 border-t-2 border-l-2 border-emerald-500/30 rounded-tl-3xl" />
-      <div className="absolute top-10 right-10 w-20 h-20 border-t-2 border-r-2 border-emerald-500/30 rounded-tr-3xl" />
-      <div className="absolute bottom-10 left-10 w-20 h-20 border-b-2 border-l-2 border-emerald-500/30 rounded-bl-3xl" />
-      <div className="absolute bottom-10 right-10 w-20 h-20 border-b-2 border-r-2 border-emerald-500/30 rounded-br-3xl" />
+      <div className="absolute top-8 left-8 w-16 h-16 border-t border-l border-emerald-500/20 rounded-tl-2xl" />
+      <div className="absolute top-8 right-8 w-16 h-16 border-t border-r border-emerald-500/20 rounded-tr-2xl" />
+      <div className="absolute bottom-8 left-8 w-16 h-16 border-b border-l border-emerald-500/20 rounded-bl-2xl" />
+      <div className="absolute bottom-8 right-8 w-16 h-16 border-b border-r border-emerald-500/20 rounded-br-2xl" />
 
       {/* Scanning Line */}
       <motion.div 
         initial={{ top: '0%' }}
         animate={{ top: '100%' }}
-        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-        className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent shadow-[0_0_15px_rgba(16,185,129,0.5)] z-20"
+        transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+        className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent shadow-[0_0_15px_rgba(16,185,129,0.2)] z-20"
       />
 
-      {/* Dynamic Data Points */}
-      <div className="absolute top-1/4 left-20 space-y-4 hidden md:block">
-        <HUDData label="SAT_ID" value="S2-B8A" />
-        <HUDData label="SIGNAL" value="98.4%" color="text-emerald-400" />
-        <HUDData label="COORD" value="12.9716° N" />
+      {/* Top Left Data - Far Corner */}
+      <div className="absolute top-12 left-12 space-y-2 hidden lg:block opacity-50">
+        <HUDData label="SAT_LINK" value="ACTIVE" color="text-emerald-400" />
+        <HUDData label="ORBIT" value="LEO-SYNC" />
       </div>
 
-      <div className="absolute bottom-1/4 right-20 space-y-4 hidden md:block text-right">
-        <HUDData label="ALTITUDE" value="786KM" />
-        <HUDData label="SENSOR" value="MULTISPECTRAL" />
-        <HUDData label="STATUS" value="SCANNING" color="text-emerald-400 animate-pulse" />
+      {/* Top Right Data - Far Corner */}
+      <div className="absolute top-12 right-12 space-y-2 hidden lg:block text-right opacity-50">
+        <HUDData label="COORD" value="12.97° N" />
+        <HUDData label="SIG_STR" value="98.4%" />
       </div>
 
-      {/* Center Target */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20">
+      {/* Bottom Left Data - Far Corner */}
+      <div className="absolute bottom-12 left-12 space-y-2 hidden lg:block opacity-50">
+        <HUDData label="SENSOR" value="SPECTRAL-v4" />
+        <HUDData label="MODE" value="RECON" />
+      </div>
+
+      {/* Bottom Right Data - Far Corner */}
+      <div className="absolute bottom-12 right-12 space-y-2 hidden lg:block text-right opacity-50">
+        <HUDData label="STATUS" value="NOMINAL" color="text-emerald-400" />
+        <HUDData label="TIME" value={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} />
+      </div>
+
+      {/* Center Target - Subtle */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03]">
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
         >
-          <Crosshair className="w-64 h-64 text-emerald-500" />
+          <Crosshair className="w-96 h-96 text-emerald-500" />
         </motion.div>
       </div>
-
-      {/* Random Glitch Elements */}
-      <motion.div
-        animate={{ 
-          opacity: [0, 0.5, 0],
-          x: [0, 10, -10, 0]
-        }}
-        transition={{ duration: 0.2, repeat: Infinity, repeatDelay: 5 }}
-        className="absolute top-1/3 right-1/4 p-2 bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400"
-      >
-        ERROR: CLOUD_COVER_DETECTED_0.02%
-      </motion.div>
     </div>
   );
 };
 
 const HUDData = ({ label, value, color = "text-slate-500" }) => (
   <div className="font-mono">
-    <div className="text-[10px] text-slate-500 uppercase tracking-widest">{label}</div>
-    <div className={`text-sm font-bold ${color}`}>{value}</div>
+    <div className="text-[8px] text-slate-500 uppercase tracking-[0.2em]">{label}</div>
+    <div className={`text-[10px] font-black ${color}`}>{value}</div>
   </div>
 );
 

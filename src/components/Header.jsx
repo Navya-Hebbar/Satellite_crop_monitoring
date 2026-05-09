@@ -40,9 +40,8 @@ const Header = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`relative text-sm font-medium transition-colors duration-300 hover:text-emerald-400 ${
-                  location.pathname === link.path ? 'text-emerald-400' : 'text-slate-300'
-                }`}
+                className={`relative text-sm font-medium transition-colors duration-300 hover:text-emerald-400 ${location.pathname === link.path ? 'text-emerald-400' : 'text-slate-300'
+                  }`}
               >
                 {link.name}
                 {location.pathname === link.path && (
@@ -81,11 +80,10 @@ const Header = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`block px-3 py-4 text-base font-medium rounded-xl ${
-                    location.pathname === link.path 
-                      ? 'bg-emerald-500/10 text-emerald-400' 
-                      : 'text-slate-300 hover:bg-white/5'
-                  }`}
+                  className={`block px-3 py-4 text-base font-medium rounded-xl ${location.pathname === link.path
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : 'text-slate-300 hover:bg-white/5'
+                    }`}
                 >
                   {link.name}
                 </Link>

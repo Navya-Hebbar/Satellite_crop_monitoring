@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# GEE Credentials
+backend/gee-key.json
+.env

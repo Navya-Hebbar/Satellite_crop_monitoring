@@ -93,42 +93,43 @@ const Home = () => {
         </section>
 
         {/* 3D Visual Experience Section */}
-        <section className="py-32 px-4 max-w-7xl mx-auto">
-          <div className="glass rounded-[3rem] overflow-hidden border border-white/10 relative min-h-[600px] flex items-center">
+        <section className="py-20 px-4 max-w-7xl mx-auto">
+          <div className="glass rounded-[3rem] overflow-hidden border border-white/10 relative min-h-[850px] flex flex-col justify-center shadow-2xl transition-all duration-500">
             <ScannerHUD />
             
             <div className="absolute inset-0 z-0">
-              <Canvas>
+              <Canvas camera={{ position: [0, 0, 4.5] }}>
                 <Suspense fallback={null}>
                   <SatelliteGlobe />
                 </Suspense>
               </Canvas>
             </div>
 
-            <div className="relative z-10 grid md:grid-cols-2 gap-12 p-12 items-center pointer-events-none">
-              <div className="pointer-events-auto">
+            <div className="relative z-20 grid lg:grid-cols-12 gap-12 p-8 md:p-16 lg:p-24 pointer-events-none w-full">
+              <div className="pointer-events-auto lg:col-span-7">
                 <motion.div
                   initial={{ opacity: 0, x: -50 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                 >
-                  <h2 className="text-4xl md:text-5xl font-black text-white mb-8 tracking-tighter">
-                    Global Insights, <br />
-                    <span className="text-emerald-400">Local Impact.</span>
+                  <h2 className="text-5xl md:text-6xl lg:text-8xl font-black text-white mb-12 tracking-tighter leading-[0.9]">
+                    Global <br />
+                    <span className="text-emerald-400">Insights,</span> <br />
+                    <span className="text-white/50">Local Impact.</span>
                   </h2>
-                  <div className="space-y-6">
+                  <div className="space-y-10 max-w-xl">
                     {[
-                      { title: 'Full Spectrum Analysis', desc: 'Multi-band processing for early disease detection.' },
-                      { title: 'Sub-meter Resolution', desc: 'Precision tracking down to the leaf level.' },
-                      { title: 'AI-Powered Forecasting', desc: 'Predictive yield modeling using historical trends.' }
+                      { title: 'Full Spectrum Analysis', desc: 'Multi-band processing for early disease detection and soil moisture profiling.' },
+                      { title: 'Sub-meter Resolution', desc: 'Precision tracking down to the leaf level with high-frequency revisit cycles.' },
+                      { title: 'AI-Powered Forecasting', desc: 'Predictive yield modeling using historical trends and real-time climatic data.' }
                     ].map((item, i) => (
-                      <div key={i} className="flex items-start space-x-4">
-                        <div className="mt-1 w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                          <Zap className="w-3 h-3 text-white" />
+                      <div key={i} className="flex items-start space-x-6 group">
+                        <div className="mt-1 w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/40 transition-all duration-300">
+                          <Zap className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div>
-                          <h4 className="text-lg font-bold text-white">{item.title}</h4>
-                          <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
+                          <h4 className="text-2xl font-black text-white mb-2 tracking-tight">{item.title}</h4>
+                          <p className="text-slate-400 text-lg leading-relaxed">{item.desc}</p>
                         </div>
                       </div>
                     ))}
@@ -136,24 +137,35 @@ const Home = () => {
                 </motion.div>
               </div>
               
-              <div className="relative hidden md:block">
-                {/* Information cards floating in 3D space */}
+              <div className="relative hidden lg:block lg:col-span-5 h-full min-h-[500px]">
+                {/* Floating Status Cards - Repositioned to far right to avoid any overlap */}
                 <motion.div 
-                  animate={{ y: [0, -20, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute -top-20 right-0 p-6 glass rounded-2xl border border-emerald-500/30 backdrop-blur-2xl"
+                  animate={{ y: [0, -40, 0] }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute top-10 right-0 p-8 glass rounded-3xl border border-emerald-500/20 backdrop-blur-3xl shadow-2xl min-w-[240px]"
                 >
-                  <div className="text-xs font-mono text-emerald-400 mb-2 tracking-widest uppercase">System Health</div>
-                  <div className="text-2xl font-black text-white">NOMINAL</div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-[10px] font-mono text-emerald-400 tracking-[0.4em] uppercase">Status</div>
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  </div>
+                  <div className="text-4xl font-black text-white tracking-tighter">OPERATIONAL</div>
+                  <div className="mt-4 h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden">
+                    <motion.div 
+                      animate={{ width: ['0%', '100%'] }}
+                      transition={{ duration: 4, repeat: Infinity }}
+                      className="h-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                    />
+                  </div>
                 </motion.div>
 
                 <motion.div 
-                  animate={{ y: [0, 20, 0] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                  className="absolute -bottom-20 left-0 p-6 glass rounded-2xl border border-teal-500/30 backdrop-blur-2xl"
+                  animate={{ y: [0, 40, 0] }}
+                  transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  className="absolute bottom-10 right-10 p-8 glass rounded-3xl border border-teal-500/20 backdrop-blur-3xl shadow-2xl min-w-[240px]"
                 >
-                  <div className="text-xs font-mono text-teal-400 mb-2 tracking-widest uppercase">Coverage</div>
-                  <div className="text-2xl font-black text-white">1.2B Hectares</div>
+                  <div className="text-[10px] font-mono text-teal-400 mb-4 tracking-[0.4em] uppercase">Global Feed</div>
+                  <div className="text-4xl font-black text-white tracking-tighter">1.2B+ <span className="text-xs text-slate-500">HECTARES</span></div>
+                  <div className="text-[10px] text-slate-500 mt-2 font-mono">SCANNING COMPLETED: 94.2%</div>
                 </motion.div>
               </div>
             </div>
