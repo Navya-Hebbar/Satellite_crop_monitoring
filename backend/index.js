@@ -46,22 +46,27 @@ const initializeGEE = () => {
 initializeGEE();
 
 // API Endpoint to fetch NDVI
-app.get('/api/ndvi', (req, res) => {
-  const { lat, lng, start, end, regionName } = req.query;
-
+app.get('/api/ndvi', async (req, res) => {
+  const { lat, lng, regionName, startDate, endDate, buffer } = req.query;
+  
   if (!lat || !lng) {
-    return res.status(400).json({ error: 'Latitude and Longitude are required.' });
+    return res.status(400).json({ error: 'Latitude and Longitude are required' });
   }
 
-  console.log(`Fetching NDVI for ${regionName || 'Custom Region'} [${lat}, ${lng}]...`);
+  // Use provided params or defaults
+  const start = startDate || '2023-01-01';
+  const end = endDate || '2024-01-01';
+  const bufferRadius = parseInt(buffer) || 1000;
+
+  console.log(`[GEE] Fetching: ${regionName || 'Custom'} [${lat}, ${lng}] Area: ${bufferRadius}m Dates: ${start} to ${end}`);
 
   try {
     const point = ee.Geometry.Point([parseFloat(lng), parseFloat(lat)]);
-    const area = point.buffer(1000).bounds(); // 1km buffer
+    const area = point.buffer(bufferRadius);
 
     const collection = ee.ImageCollection("COPERNICUS/S2_SR")
       .filterBounds(area)
-      .filterDate(start || '2024-01-01', end || '2024-12-31')
+      .filterDate(start, end)
       .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
 
     const ndviSeries = collection.map((img) => {

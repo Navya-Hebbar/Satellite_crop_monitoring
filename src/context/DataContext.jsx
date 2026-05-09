@@ -13,6 +13,11 @@ export const DataProvider = ({ children }) => {
   const [seasonalTrends, setSeasonalTrends] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Mission Settings
+  const [startDate, setStartDate] = useState('2023-01-01');
+  const [endDate, setEndDate] = useState('2024-01-01');
+  const [bufferSize, setBufferSize] = useState(1000);
+
   const regionDatabase = {
     'Bangalore': { lat: 12.9716, lng: 77.5946 },
     'Kolar': { lat: 13.1363, lng: 78.1291 },
@@ -34,10 +39,10 @@ export const DataProvider = ({ children }) => {
     return 'Unhealthy';
   };
 
-  const fetchRegionData = async (regionName) => {
+  const fetchRegionData = async (regionName, start, end, buff) => {
     const { lat, lng } = regionDatabase[regionName];
     try {
-      const response = await fetch(`http://localhost:3001/api/ndvi?lat=${lat}&lng=${lng}&regionName=${regionName}`);
+      const response = await fetch(`http://localhost:3001/api/ndvi?lat=${lat}&lng=${lng}&regionName=${regionName}&startDate=${start}&endDate=${end}&buffer=${buff}`);
       if (!response.ok) throw new Error('Backend offline');
       return await response.json();
     } catch (err) {
@@ -45,7 +50,7 @@ export const DataProvider = ({ children }) => {
       return Array.from({ length: 12 }, (_, i) => {
         const val = 0.3 + Math.random() * 0.5;
         return {
-          date: `2024-${String(i + 1).padStart(2, '0')}-01`,
+          date: `${start.split('-')[0]}-${String(i + 1).padStart(2, '0')}-01`,
           ndvi: val,
           status: classifyNDVI(val)
         };
@@ -96,24 +101,20 @@ export const DataProvider = ({ children }) => {
   useEffect(() => {
     const loadSelected = async () => {
       setLoading(true);
-      const newMap = { ...data };
-      let changed = false;
-
+      const newMap = {};
+      
       for (const region of selectedRegions) {
-        if (!newMap[region]) {
-          newMap[region] = await fetchRegionData(region);
-          changed = true;
-        }
+        newMap[region] = await fetchRegionData(region, startDate, endDate, bufferSize);
       }
 
-      if (changed) setData(newMap);
+      setData(newMap);
       setLoading(false);
     };
     loadSelected();
-  }, [selectedRegions]);
+  }, [selectedRegions, startDate, endDate, bufferSize]);
 
   useEffect(() => {
-    if (selectedRegions.length === 1 && data[selectedRegions[0]]) {
+    if (selectedRegions.length > 0 && data[selectedRegions[0]]) {
       updateStats(data[selectedRegions[0]]);
     }
   }, [selectedRegions, data]);
@@ -128,6 +129,9 @@ export const DataProvider = ({ children }) => {
       allCities,
       seasonalTrends,
       loading,
+      startDate, setStartDate,
+      endDate, setEndDate,
+      bufferSize, setBufferSize,
       insights: [] 
     }}>
       {children}

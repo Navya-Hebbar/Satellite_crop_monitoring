@@ -42,7 +42,10 @@ const Dashboard = () => {
     setSelectedRegions, 
     allCities = [], 
     seasonalTrends = [], 
-    loading 
+    loading,
+    startDate, setStartDate,
+    endDate, setEndDate,
+    bufferSize, setBufferSize
   } = useData();
 
   const addSlot = () => {
@@ -95,60 +98,106 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-      {/* Slot Selection Header */}
-      <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <AnimatePresence mode="popLayout">
-            {selectedRegions.map((city, idx) => (
-              <motion.div 
-                key={`${city}-${idx}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="flex items-center space-x-2 bg-white/5 border border-white/10 p-1.5 pl-3 rounded-xl hover:border-white/20 transition-colors"
-              >
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: COLORS[idx] }} />
-                <select 
-                  value={city}
-                  onChange={(e) => updateSlot(idx, e.target.value)}
-                  className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer pr-1"
+      {/* Slot Selection & Mission Parameters */}
+      <div className="flex flex-col gap-8">
+        <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <AnimatePresence mode="popLayout">
+              {selectedRegions.map((city, idx) => (
+                <motion.div 
+                  key={`${city}-${idx}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center space-x-2 bg-white/5 border border-white/10 p-1.5 pl-3 rounded-xl hover:border-white/20 transition-colors"
                 >
-                  {allCities.map(c => (
-                    <option key={c} value={c} className="bg-[#0f172a]">{c}</option>
-                  ))}
-                </select>
-                {selectedRegions.length > 1 && (
-                  <button 
-                    onClick={() => removeSlot(idx)}
-                    className="p-1 hover:bg-white/10 rounded-lg text-slate-500 hover:text-red-400 transition-colors"
+                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: COLORS[idx] }} />
+                  <select 
+                    value={city}
+                    onChange={(e) => updateSlot(idx, e.target.value)}
+                    className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer pr-1"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          
-          {selectedRegions.length < 5 && (
-            <button 
-              onClick={addSlot}
-              className="flex items-center space-x-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-bold transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Region</span>
-            </button>
-          )}
+                    {allCities.map(c => (
+                      <option key={c} value={c} className="bg-[#0f172a]">{c}</option>
+                    ))}
+                  </select>
+                  {selectedRegions.length > 1 && (
+                    <button 
+                      onClick={() => removeSlot(idx)}
+                      className="p-1 hover:bg-white/10 rounded-lg text-slate-500 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            
+            {selectedRegions.length < 5 && (
+              <button 
+                onClick={addSlot}
+                className="flex items-center space-x-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-bold transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Region</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-6">
+            <div className="text-right hidden sm:block">
+              <p className="text-[10px] text-slate-500 font-black tracking-widest uppercase">Mission Status</p>
+              <p className="text-sm font-bold text-white uppercase tracking-tighter">
+                {selectedRegions.length > 1 ? 'Multi-Sector Benchmark' : 'Single Grid Recon'}
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Monitor className="w-6 h-6 text-emerald-400" />
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-6">
-          <div className="text-right hidden sm:block">
-            <p className="text-[10px] text-slate-500 font-black tracking-widest uppercase">Mission Status</p>
-            <p className="text-sm font-bold text-white uppercase tracking-tighter">
-              {selectedRegions.length > 1 ? 'Multi-Sector Benchmark' : 'Single Grid Recon'}
-            </p>
+        {/* Dynamic Mission Parameters Panel */}
+        <div className="glass p-8 rounded-[2rem] border border-white/10 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="space-y-3">
+            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
+              <Calendar className="w-3 h-3 mr-2 text-emerald-400" />
+              Analysis Start
+            </label>
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-emerald-500/50 outline-none transition-all"
+            />
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-            <Monitor className="w-6 h-6 text-emerald-400" />
+          <div className="space-y-3">
+            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
+              <Calendar className="w-3 h-3 mr-2 text-blue-400" />
+              Analysis End
+            </label>
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-blue-500/50 outline-none transition-all"
+            />
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
+                <Shield className="w-3 h-3 mr-2 text-yellow-400" />
+                Scanning Buffer
+              </label>
+              <span className="text-[10px] font-mono text-white bg-white/5 px-2 py-0.5 rounded-md">{bufferSize}m</span>
+            </div>
+            <input 
+              type="range" 
+              min="100" max="5000" step="100"
+              value={bufferSize} 
+              onChange={(e) => setBufferSize(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all"
+            />
           </div>
         </div>
       </div>
@@ -187,7 +236,15 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Trend Benchmarking */}
-        <div className="lg:col-span-2 glass p-8 rounded-[2.5rem] border border-white/10 shadow-2xl">
+        <div className="lg:col-span-2 glass p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+          {loading && (
+            <div className="absolute inset-0 bg-[#0f172a]/40 backdrop-blur-sm z-50 flex items-center justify-center rounded-[2.5rem]">
+              <div className="flex flex-col items-center">
+                <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-2" />
+                <p className="text-[10px] text-emerald-400 font-black tracking-widest uppercase animate-pulse">Re-syncing GEE Feed...</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-xl font-black text-white tracking-tight flex items-center">
