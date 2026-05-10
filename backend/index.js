@@ -49,7 +49,7 @@ initializeGEE();
 // API Endpoint to fetch NDVI
 app.get('/api/ndvi', async (req, res) => {
   const { lat, lng, regionName, startDate, endDate, buffer } = req.query;
-  
+
   if (!lat || !lng) {
     return res.status(400).json({ error: 'Latitude and Longitude are required' });
   }
@@ -93,7 +93,7 @@ app.get('/api/ndvi', async (req, res) => {
         ndvi: f.properties.ndvi,
         status: f.properties.ndvi > 0.6 ? 'Healthy' : f.properties.ndvi >= 0.3 ? 'Moderate' : 'Unhealthy'
       })).filter(f => f.ndvi !== null);
-      
+
       res.json(results);
     });
   } catch (error) {
@@ -105,14 +105,14 @@ app.get('/api/ndvi', async (req, res) => {
 app.post('/api/generate-report', async (req, res) => {
   try {
     const { stats, selectedRegions, data } = req.body;
-    
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is not set in backend/.env' });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
     const prompt = `You are an expert agronomist AI analyzing satellite crop data (NDVI).
     The user is monitoring the following regions: ${selectedRegions.join(', ')}.
@@ -133,7 +133,7 @@ app.post('/api/generate-report', async (req, res) => {
 
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
-    
+
     res.json({ report: responseText });
   } catch (error) {
     console.error('Gemini API Error:', error);
