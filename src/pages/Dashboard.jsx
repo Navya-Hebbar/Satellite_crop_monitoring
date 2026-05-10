@@ -1,19 +1,20 @@
 import { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Legend
 } from 'recharts';
-import { 
-  TrendingUp, TrendingDown, Activity, Map as MapIcon, 
+import {
+  TrendingUp, TrendingDown, Activity, Map as MapIcon,
   Calendar, Info, Plus, Trash2, Monitor, AlertTriangle,
-  ArrowUpRight, CheckCircle2, AlertCircle, Shield
+  ArrowUpRight, CheckCircle2, AlertCircle, Shield,
+  History, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TacticalLog from '../components/TacticalLog';
 
 const KPICard = ({ title, value, subValue, icon: Icon, color }) => (
-  <motion.div 
+  <motion.div
     whileHover={{ y: -5 }}
     className="glass p-6 rounded-3xl border border-white/10 relative overflow-hidden group"
   >
@@ -34,19 +35,25 @@ const KPICard = ({ title, value, subValue, icon: Icon, color }) => (
 );
 
 const Dashboard = () => {
-  const { 
-    data = [], 
-    allRegionsData = {}, 
-    stats = { avg: 0, max: 0, min: 0, currentStatus: 'N/A' }, 
-    selectedRegions = ['Bangalore'], 
-    setSelectedRegions, 
-    allCities = [], 
-    seasonalTrends = [], 
+  const {
+    data = [],
+    allRegionsData = {},
+    stats = { avg: 0, max: 0, min: 0, currentStatus: 'N/A' },
+    selectedRegions = ['Bangalore'],
+    setSelectedRegions,
+    allCities = [],
+    seasonalTrends = [],
     loading,
     startDate, setStartDate,
     endDate, setEndDate,
-    bufferSize, setBufferSize
+    bufferSize, setBufferSize,
+    showYoY, setShowYoY,
+    yoyDataMap
   } = useData();
+
+  const exportToPDF = () => {
+    window.print();
+  };
 
   const addSlot = () => {
     if (selectedRegions.length < 5) {
@@ -71,17 +78,20 @@ const Dashboard = () => {
     if (!selectedRegions || selectedRegions.length === 0) return [];
     const firstRegion = selectedRegions[0];
     const baseData = allRegionsData[firstRegion] || [];
-    
+
     return baseData.map((d, i) => {
       const point = { date: d.date };
       selectedRegions.forEach(region => {
         if (allRegionsData[region] && allRegionsData[region][i]) {
           point[region] = allRegionsData[region][i].ndvi;
         }
+        if (showYoY && yoyDataMap[region] && yoyDataMap[region][i]) {
+          point[`${region} (Prev Year)`] = yoyDataMap[region][i].ndvi;
+        }
       });
       return point;
     });
-  }, [allRegionsData, selectedRegions]);
+  }, [allRegionsData, selectedRegions, showYoY, yoyDataMap]);
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -104,7 +114,7 @@ const Dashboard = () => {
           <div className="flex flex-wrap items-center gap-3">
             <AnimatePresence mode="popLayout">
               {selectedRegions.map((city, idx) => (
-                <motion.div 
+                <motion.div
                   key={`${city}-${idx}`}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -112,7 +122,7 @@ const Dashboard = () => {
                   className="flex items-center space-x-2 bg-white/5 border border-white/10 p-1.5 pl-3 rounded-xl hover:border-white/20 transition-colors"
                 >
                   <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: COLORS[idx] }} />
-                  <select 
+                  <select
                     value={city}
                     onChange={(e) => updateSlot(idx, e.target.value)}
                     className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer pr-1"
@@ -122,7 +132,7 @@ const Dashboard = () => {
                     ))}
                   </select>
                   {selectedRegions.length > 1 && (
-                    <button 
+                    <button
                       onClick={() => removeSlot(idx)}
                       className="p-1 hover:bg-white/10 rounded-lg text-slate-500 hover:text-red-400 transition-colors"
                     >
@@ -132,9 +142,9 @@ const Dashboard = () => {
                 </motion.div>
               ))}
             </AnimatePresence>
-            
+
             {selectedRegions.length < 5 && (
-              <button 
+              <button
                 onClick={addSlot}
                 className="flex items-center space-x-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-bold transition-all"
               >
@@ -145,6 +155,12 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center space-x-6">
+            <div className="flex gap-2">
+              <button onClick={exportToPDF} className="flex items-center space-x-2 px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl text-purple-400 text-sm font-bold transition-all">
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Export PDF</span>
+              </button>
+            </div>
             <div className="text-right hidden sm:block">
               <p className="text-[10px] text-slate-500 font-black tracking-widest uppercase">Mission Status</p>
               <p className="text-sm font-bold text-white uppercase tracking-tighter">
@@ -164,9 +180,9 @@ const Dashboard = () => {
               <Calendar className="w-3 h-3 mr-2 text-emerald-400" />
               Analysis Start
             </label>
-            <input 
-              type="date" 
-              value={startDate} 
+            <input
+              type="date"
+              value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-emerald-500/50 outline-none transition-all"
             />
@@ -176,9 +192,9 @@ const Dashboard = () => {
               <Calendar className="w-3 h-3 mr-2 text-blue-400" />
               Analysis End
             </label>
-            <input 
-              type="date" 
-              value={endDate} 
+            <input
+              type="date"
+              value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-blue-500/50 outline-none transition-all"
             />
@@ -191,10 +207,10 @@ const Dashboard = () => {
               </label>
               <span className="text-[10px] font-mono text-white bg-white/5 px-2 py-0.5 rounded-md">{bufferSize}m</span>
             </div>
-            <input 
-              type="range" 
+            <input
+              type="range"
               min="100" max="5000" step="100"
-              value={bufferSize} 
+              value={bufferSize}
               onChange={(e) => setBufferSize(parseInt(e.target.value))}
               className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all"
             />
@@ -204,33 +220,33 @@ const Dashboard = () => {
 
       {/* KPI Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard 
-          title="Average Health" 
-          value={stats.avg} 
-          subValue={stats.currentStatus} 
-          icon={Activity} 
-          color="text-emerald-400" 
+        <KPICard
+          title="Average Health"
+          value={stats.avg}
+          subValue={stats.currentStatus}
+          icon={Activity}
+          color="text-emerald-400"
         />
-        <KPICard 
-          title="Peak NDVI" 
-          value={stats.max} 
-          subValue="Highest Point" 
-          icon={TrendingUp} 
-          color="text-blue-400" 
+        <KPICard
+          title="Peak NDVI"
+          value={stats.max}
+          subValue="Highest Point"
+          icon={TrendingUp}
+          color="text-blue-400"
         />
-        <KPICard 
-          title="Min Index" 
-          value={stats.min} 
-          subValue="Stress Point" 
-          icon={AlertTriangle} 
-          color="text-red-400" 
+        <KPICard
+          title="Min Index"
+          value={stats.min}
+          subValue="Stress Point"
+          icon={AlertTriangle}
+          color="text-red-400"
         />
-        <KPICard 
-          title="Active Sectors" 
-          value={selectedRegions.length} 
-          subValue="GEE Sync: Live" 
-          icon={Shield} 
-          color="text-indigo-400" 
+        <KPICard
+          title="Active Sectors"
+          value={selectedRegions.length}
+          subValue="GEE Sync: Live"
+          icon={Shield}
+          color="text-indigo-400"
         />
       </div>
 
@@ -253,33 +269,52 @@ const Dashboard = () => {
               </h3>
               <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest">Multi-spectral temporal distribution</p>
             </div>
+            <button 
+              onClick={() => setShowYoY(!showYoY)}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showYoY ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>YoY Compare</span>
+            </button>
           </div>
 
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={comparisonData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#475569" 
-                  fontSize={10} 
+                <XAxis
+                  dataKey="date"
+                  stroke="#475569"
+                  fontSize={10}
                   tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                 />
                 <YAxis stroke="#475569" fontSize={10} domain={[0.2, 1]} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                   itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px' }} />
                 {selectedRegions.map((region, idx) => (
-                  <Line 
+                  <Line
                     key={region}
-                    type="monotone" 
-                    dataKey={region} 
-                    stroke={COLORS[idx]} 
+                    type="monotone"
+                    dataKey={region}
+                    stroke={COLORS[idx % COLORS.length]}
                     strokeWidth={3}
                     dot={false}
                     activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                ))}
+                {showYoY && selectedRegions.map((region, idx) => (
+                  <Line 
+                    key={`${region} (Prev Year)`}
+                    type="monotone" 
+                    dataKey={`${region} (Prev Year)`} 
+                    stroke={COLORS[idx % COLORS.length]} 
+                    strokeWidth={1.5}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    activeDot={false}
                   />
                 ))}
               </LineChart>
@@ -293,7 +328,7 @@ const Dashboard = () => {
             <Activity className="w-5 h-5 mr-2 text-emerald-400" />
             Vegetation Stress Distribution
           </h3>
-          
+
           <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar max-h-[400px]">
             {selectedRegions.map((city, idx) => {
               const regionData = allRegionsData[city] || [];
@@ -309,9 +344,9 @@ const Dashboard = () => {
                     <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">{idx === 0 ? 'Primary' : `Slot ${idx + 1}`}</span>
                   </div>
                   <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden flex">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${(healthyCount/total)*100}%` }} className="h-full bg-emerald-500" />
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${(moderateCount/total)*100}%` }} className="h-full bg-yellow-500" />
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${(unhealthyCount/total)*100}%` }} className="h-full bg-red-500" />
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${(healthyCount / total) * 100}%` }} className="h-full bg-emerald-500" />
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${(moderateCount / total) * 100}%` }} className="h-full bg-yellow-500" />
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${(unhealthyCount / total) * 100}%` }} className="h-full bg-red-500" />
                   </div>
                 </div>
               );
@@ -347,13 +382,13 @@ const Dashboard = () => {
             Actionable Intelligence
           </h3>
           <div className="space-y-4">
-             <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start space-x-4">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-1" />
-                <div>
-                  <p className="text-sm font-bold text-white">System Synchronized</p>
-                  <p className="text-xs text-slate-500">Live feed active for {selectedRegions.length} sectors.</p>
-                </div>
-             </div>
+            <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start space-x-4">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-1" />
+              <div>
+                <p className="text-sm font-bold text-white">System Synchronized</p>
+                <p className="text-xs text-slate-500">Live feed active for {selectedRegions.length} sectors.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -380,14 +415,13 @@ const Dashboard = () => {
                   <td className="px-8 py-4 text-slate-400">{row.date}</td>
                   <td className="px-8 py-4 text-white font-bold">{row.ndvi.toFixed(4)}</td>
                   <td className="px-8 py-4">
-                    <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${
-                      row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' : 'border-red-500/20 text-red-400'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' : 'border-red-500/20 text-red-400'
+                      }`}>
                       {row.ndvi > 0.6 ? 'Healthy' : 'Stress'}
                     </span>
                   </td>
                   <td className="px-8 py-4 text-right">
-                    {idx > 0 && data[idx-1].ndvi < row.ndvi ? <ArrowUpRight className="inline w-4 h-4 text-emerald-400" /> : <TrendingDown className="inline w-4 h-4 text-red-500/30" />}
+                    {idx > 0 && data[idx - 1].ndvi < row.ndvi ? <ArrowUpRight className="inline w-4 h-4 text-emerald-400" /> : <TrendingDown className="inline w-4 h-4 text-red-500/30" />}
                   </td>
                 </tr>
               ))}

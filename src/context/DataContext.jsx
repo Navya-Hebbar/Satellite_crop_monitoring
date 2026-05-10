@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
-  const [data, setData] = useState({}); 
+  const [data, setData] = useState({});
   const [selectedRegions, setSelectedRegions] = useState(['Bangalore']);
   const [stats, setStats] = useState({
     avg: 0, max: 0, min: 0, currentStatus: 'N/A',
@@ -12,6 +12,9 @@ export const DataProvider = ({ children }) => {
   });
   const [seasonalTrends, setSeasonalTrends] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [showYoY, setShowYoY] = useState(false);
+  const [yoyDataMap, setYoyDataMap] = useState({});
 
   // Mission Settings
   const [startDate, setStartDate] = useState('2023-01-01');
@@ -62,7 +65,7 @@ export const DataProvider = ({ children }) => {
     if (!regionData || regionData.length === 0) return;
     const ndvis = regionData.map(d => d.ndvi);
     const avg = ndvis.reduce((a, b) => a + b, 0) / ndvis.length;
-    
+
     setStats({
       avg: avg.toFixed(2),
       max: Math.max(...ndvis).toFixed(2),
@@ -102,7 +105,7 @@ export const DataProvider = ({ children }) => {
     const loadSelected = async () => {
       setLoading(true);
       const newMap = {};
-      
+
       for (const region of selectedRegions) {
         newMap[region] = await fetchRegionData(region, startDate, endDate, bufferSize);
       }
@@ -114,17 +117,38 @@ export const DataProvider = ({ children }) => {
   }, [selectedRegions, startDate, endDate, bufferSize]);
 
   useEffect(() => {
+    const loadYoY = async () => {
+      if (!showYoY) return;
+      
+      const pStart = new Date(startDate); pStart.setFullYear(pStart.getFullYear() - 1);
+      const pEnd = new Date(endDate); pEnd.setFullYear(pEnd.getFullYear() - 1);
+      
+      const newYoyMap = {};
+      for (const region of selectedRegions) {
+        newYoyMap[region] = await fetchRegionData(
+           region, 
+           pStart.toISOString().split('T')[0], 
+           pEnd.toISOString().split('T')[0], 
+           bufferSize
+        );
+      }
+      setYoyDataMap(newYoyMap);
+    };
+    loadYoY();
+  }, [showYoY, selectedRegions, startDate, endDate, bufferSize]);
+
+  useEffect(() => {
     if (selectedRegions.length > 0 && data[selectedRegions[0]]) {
       updateStats(data[selectedRegions[0]]);
     }
   }, [selectedRegions, data]);
 
   return (
-    <DataContext.Provider value={{ 
-      data: data[selectedRegions[0]] || [], 
+    <DataContext.Provider value={{
+      data: data[selectedRegions[0]] || [],
       allRegionsData: data,
-      stats, 
-      selectedRegions, 
+      stats,
+      selectedRegions,
       setSelectedRegions,
       allCities,
       seasonalTrends,
@@ -132,7 +156,9 @@ export const DataProvider = ({ children }) => {
       startDate, setStartDate,
       endDate, setEndDate,
       bufferSize, setBufferSize,
-      insights: [] 
+      showYoY, setShowYoY,
+      yoyDataMap,
+      insights: []
     }}>
       {children}
     </DataContext.Provider>
