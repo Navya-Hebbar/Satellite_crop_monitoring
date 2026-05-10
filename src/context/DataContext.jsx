@@ -21,7 +21,7 @@ export const DataProvider = ({ children }) => {
   const [endDate, setEndDate] = useState('2024-01-01');
   const [bufferSize, setBufferSize] = useState(1000);
 
-  const regionDatabase = {
+  const [regionDatabase, setRegionDatabase] = useState({
     'Bangalore': { lat: 12.9716, lng: 77.5946 },
     'Kolar': { lat: 13.1363, lng: 78.1291 },
     'Mysore': { lat: 12.2958, lng: 76.6394 },
@@ -32,9 +32,13 @@ export const DataProvider = ({ children }) => {
     'Davanagere': { lat: 14.4644, lng: 75.9218 },
     'Shimoga': { lat: 13.9299, lng: 75.5681 },
     'Tumkur': { lat: 13.3392, lng: 77.1140 }
-  };
+  });
 
   const allCities = Object.keys(regionDatabase);
+
+  const addCustomRegion = (name, lat, lng) => {
+    setRegionDatabase(prev => ({ ...prev, [name]: { lat, lng } }));
+  };
 
   const classifyNDVI = (val) => {
     if (val > 0.6) return 'Healthy';
@@ -151,6 +155,7 @@ export const DataProvider = ({ children }) => {
       selectedRegions,
       setSelectedRegions,
       allCities,
+      addCustomRegion,
       seasonalTrends,
       loading,
       startDate, setStartDate,

@@ -8,7 +8,7 @@ import {
   TrendingUp, TrendingDown, Activity, Map as MapIcon,
   Calendar, Info, Plus, Trash2, Monitor, AlertTriangle,
   ArrowUpRight, CheckCircle2, AlertCircle, Shield,
-  History, FileText
+  History, FileText, MapPin, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TacticalLog from '../components/TacticalLog';
@@ -48,12 +48,42 @@ const Dashboard = () => {
     endDate, setEndDate,
     bufferSize, setBufferSize,
     showYoY, setShowYoY,
-    yoyDataMap
+    yoyDataMap,
+    addCustomRegion
   } = useData();
 
   const [activeLogRegion, setActiveLogRegion] = useState(selectedRegions[0]);
   const currentLogRegion = selectedRegions.includes(activeLogRegion) ? activeLogRegion : selectedRegions[0];
   const logData = allRegionsData[currentLogRegion] || [];
+
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customLat, setCustomLat] = useState('');
+  const [customLng, setCustomLng] = useState('');
+  const [customSlotIndex, setCustomSlotIndex] = useState(null);
+
+  const handleAddCustomRegion = () => {
+    const name = customName.trim();
+    const lat = parseFloat(customLat);
+    const lng = parseFloat(customLng);
+    if (!name || isNaN(lat) || isNaN(lng)) return;
+
+    addCustomRegion(name, lat, lng);
+
+    if (customSlotIndex !== null) {
+      // Replace existing slot
+      setTimeout(() => updateSlot(customSlotIndex, name), 100);
+    } else {
+      // Add as new slot
+      setTimeout(() => setSelectedRegions(prev => [...prev, name]), 100);
+    }
+
+    setCustomName('');
+    setCustomLat('');
+    setCustomLng('');
+    setCustomSlotIndex(null);
+    setShowCustomModal(false);
+  };
 
   const exportToPDF = () => {
     window.print();
@@ -125,6 +155,80 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+      {/* Custom Location Modal */}
+      <AnimatePresence>
+        {showCustomModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+            onClick={() => setShowCustomModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass p-8 rounded-[2rem] border border-white/10 w-full max-w-md space-y-6"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-black text-white flex items-center">
+                  <MapPin className="w-5 h-5 mr-2 text-cyan-400" />
+                  Add Custom Location
+                </h3>
+                <button onClick={() => setShowCustomModal(false)} className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Location Name</label>
+                  <input
+                    type="text"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    placeholder="e.g. New Delhi"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Latitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={customLat}
+                      onChange={(e) => setCustomLat(e.target.value)}
+                      placeholder="28.6139"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Longitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={customLng}
+                      onChange={(e) => setCustomLng(e.target.value)}
+                      placeholder="77.2090"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
+                    />
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleAddCustomRegion}
+                disabled={!customName.trim() || !customLat || !customLng}
+                className="w-full py-3 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 rounded-xl text-cyan-300 font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                🛰️ Deploy Satellite Scan
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Slot Selection & Mission Parameters */}
       <div className="flex flex-col gap-8">
         <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6">
@@ -141,12 +245,20 @@ const Dashboard = () => {
                   <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: COLORS[idx] }} />
                   <select
                     value={city}
-                    onChange={(e) => updateSlot(idx, e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setCustomSlotIndex(idx);
+                        setShowCustomModal(true);
+                      } else {
+                        updateSlot(idx, e.target.value);
+                      }
+                    }}
                     className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer pr-1"
                   >
                     {allCities.map(c => (
                       <option key={c} value={c} className="bg-[#0f172a]">{c}</option>
                     ))}
+                    <option value="__custom__" className="bg-[#0f172a] text-emerald-400">📍 Custom Location...</option>
                   </select>
                   {selectedRegions.length > 1 && (
                     <button
@@ -161,13 +273,22 @@ const Dashboard = () => {
             </AnimatePresence>
 
             {selectedRegions.length < 5 && (
-              <button
-                onClick={addSlot}
-                className="flex items-center space-x-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-bold transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Region</span>
-              </button>
+              <>
+                <button
+                  onClick={addSlot}
+                  className="flex items-center space-x-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-bold transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Region</span>
+                </button>
+                <button
+                  onClick={() => { setCustomSlotIndex(null); setShowCustomModal(true); }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl text-cyan-400 text-sm font-bold transition-all"
+                >
+                  <MapPin className="w-4 h-4" />
+                  <span>Custom</span>
+                </button>
+              </>
             )}
           </div>
 
