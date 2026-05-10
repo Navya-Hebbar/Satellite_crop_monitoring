@@ -80,21 +80,34 @@ const Dashboard = () => {
 
   const comparisonData = useMemo(() => {
     if (!selectedRegions || selectedRegions.length === 0) return [];
-    const firstRegion = selectedRegions[0];
-    const baseData = allRegionsData[firstRegion] || [];
+    
+    const dateMap = {};
 
-    return baseData.map((d, i) => {
-      const point = { date: d.date };
+    selectedRegions.forEach(region => {
+      if (allRegionsData[region]) {
+        allRegionsData[region].forEach(d => {
+          if (!dateMap[d.date]) dateMap[d.date] = { date: d.date };
+          dateMap[d.date][region] = d.ndvi;
+        });
+      }
+    });
+
+    if (showYoY) {
       selectedRegions.forEach(region => {
-        if (allRegionsData[region] && allRegionsData[region][i]) {
-          point[region] = allRegionsData[region][i].ndvi;
-        }
-        if (showYoY && yoyDataMap[region] && yoyDataMap[region][i]) {
-          point[`${region} (Prev Year)`] = yoyDataMap[region][i].ndvi;
+        if (yoyDataMap[region]) {
+          yoyDataMap[region].forEach(d => {
+            const yDate = new Date(d.date);
+            yDate.setFullYear(yDate.getFullYear() + 1);
+            const shiftedDateStr = yDate.toISOString().split('T')[0];
+            
+            if (!dateMap[shiftedDateStr]) dateMap[shiftedDateStr] = { date: shiftedDateStr };
+            dateMap[shiftedDateStr][`${region} (Prev Year)`] = d.ndvi;
+          });
         }
       });
-      return point;
-    });
+    }
+
+    return Object.values(dateMap).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [allRegionsData, selectedRegions, showYoY, yoyDataMap]);
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -292,7 +305,12 @@ const Dashboard = () => {
                   fontSize={10}
                   tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                 />
-                <YAxis stroke="#475569" fontSize={10} domain={[0.2, 1]} />
+                <YAxis 
+                  stroke="#475569" 
+                  fontSize={10} 
+                  domain={[0.2, 1]} 
+                  tickFormatter={(val) => Number(val).toFixed(2)} 
+                />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                   itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
@@ -307,6 +325,7 @@ const Dashboard = () => {
                     strokeWidth={3}
                     dot={false}
                     activeDot={{ r: 6, strokeWidth: 0 }}
+                    connectNulls
                   />
                 ))}
                 {showYoY && selectedRegions.map((region, idx) => (
@@ -319,6 +338,7 @@ const Dashboard = () => {
                     strokeDasharray="5 5"
                     dot={false}
                     activeDot={false}
+                    connectNulls
                   />
                 ))}
               </LineChart>
