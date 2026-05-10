@@ -51,6 +51,10 @@ const Dashboard = () => {
     yoyDataMap
   } = useData();
 
+  const [activeLogRegion, setActiveLogRegion] = useState(selectedRegions[0]);
+  const currentLogRegion = selectedRegions.includes(activeLogRegion) ? activeLogRegion : selectedRegions[0];
+  const logData = allRegionsData[currentLogRegion] || [];
+
   const exportToPDF = () => {
     window.print();
   };
@@ -395,9 +399,25 @@ const Dashboard = () => {
 
       {/* Log Registry */}
       <div className="glass rounded-[2.5rem] border border-white/10 overflow-hidden">
-        <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between bg-white/5">
+        <div className="px-8 py-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 gap-4">
           <h3 className="text-xl font-black text-white uppercase tracking-tight">Spectral Log Registry</h3>
-          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Sector: {selectedRegions[0] || 'N/A'}</span>
+          
+          {/* Tabs for Regions */}
+          <div className="flex flex-wrap gap-2">
+            {selectedRegions.map((region) => (
+              <button
+                key={region}
+                onClick={() => setActiveLogRegion(region)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                  currentLogRegion === region 
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' 
+                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {region}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
           <table className="w-full text-left">
@@ -410,7 +430,7 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-mono text-[11px]">
-              {Array.isArray(data) && data.map((row, idx) => (
+              {Array.isArray(logData) && logData.map((row, idx) => (
                 <tr key={idx} className="hover:bg-white/5 transition-colors">
                   <td className="px-8 py-4 text-slate-400">{row.date}</td>
                   <td className="px-8 py-4 text-white font-bold">{row.ndvi.toFixed(4)}</td>
@@ -421,7 +441,7 @@ const Dashboard = () => {
                     </span>
                   </td>
                   <td className="px-8 py-4 text-right">
-                    {idx > 0 && data[idx - 1].ndvi < row.ndvi ? <ArrowUpRight className="inline w-4 h-4 text-emerald-400" /> : <TrendingDown className="inline w-4 h-4 text-red-500/30" />}
+                    {idx > 0 && logData[idx - 1].ndvi < row.ndvi ? <ArrowUpRight className="inline w-4 h-4 text-emerald-400" /> : <TrendingDown className="inline w-4 h-4 text-red-500/30" />}
                   </td>
                 </tr>
               ))}
