@@ -2,6 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal, Shield, Cpu, Wifi } from 'lucide-react';
 
+const messages = [
+  "Scanning optical frequencies...",
+  "Calibrating NDVI indices...",
+  "Acquiring telemetry data...",
+  "Synchronizing with Copernicus...",
+  "Analyzing spectral variance...",
+  "Filtering cloud interference...",
+  "Updating regional cache...",
+  "Verifying thermal signatures..."
+];
+
 const TacticalLog = () => {
   const [logs, setLogs] = useState([
     { id: 1, type: 'info', msg: 'System initialized. Orbit stable.' },

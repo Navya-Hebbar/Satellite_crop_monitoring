@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 
@@ -101,7 +102,48 @@ app.get('/api/ndvi', async (req, res) => {
   }
 });
 
+app.post('/api/generate-report', async (req, res) => {
+  try {
+    const { stats, selectedRegions, data } = req.body;
+    
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY is not set in backend/.env' });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `You are an expert agronomist AI analyzing satellite crop data (NDVI).
+    The user is monitoring the following regions: ${selectedRegions.join(', ')}.
+    
+    Overall stats for the primary region (${selectedRegions[0]}):
+    - Average NDVI: ${stats.avg}
+    - Max NDVI: ${stats.max}
+    - Min NDVI: ${stats.min}
+    - Status: ${stats.currentStatus}
+    
+    Recent data points (last 5 readings): 
+    ${JSON.stringify((data || []).slice(-5))}
+    
+    Write a short, highly professional 2-paragraph report analyzing this data. 
+    1. First paragraph: Summarize the crop health and any anomalies or trends.
+    2. Second paragraph: Provide actionable recommendations (e.g., irrigation, field inspection) based on the data.
+    Do not use markdown formatting like ** or *, just plain text paragraphs. Make it sound very scientific and authoritative.`;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    
+    res.json({ report: responseText });
+  } catch (error) {
+    console.error('Gemini API Error:', error);
+    res.status(500).json({ error: 'Failed to generate AI report.' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`--- SATELLITE BACKEND RUNNING ON PORT ${PORT} ---`);
-  console.log(`Endpoint: http://localhost:${PORT}/api/ndvi`);
+  console.log(`Endpoints: 
+  - GET http://localhost:${PORT}/api/ndvi
+  - POST http://localhost:${PORT}/api/generate-report`);
 });

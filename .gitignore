@@ -26,3 +26,4 @@ dist-ssr
 # GEE Credentials
 backend/gee-key.json
 .env
+backend/.env

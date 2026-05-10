@@ -62,6 +62,33 @@ const Dashboard = () => {
   const [customLng, setCustomLng] = useState('');
   const [customSlotIndex, setCustomSlotIndex] = useState(null);
 
+  const [aiReport, setAiReport] = useState(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  const generateAIReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/generate-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stats,
+          selectedRegions,
+          data: allRegionsData[selectedRegions[0]] || []
+        })
+      });
+      const result = await response.json();
+      if (result.error) {
+        setAiReport(`Error: ${result.error}`);
+      } else {
+        setAiReport(result.report);
+      }
+    } catch (err) {
+      setAiReport('Failed to connect to backend AI service.');
+    }
+    setIsGeneratingReport(false);
+  };
+
   const handleAddCustomRegion = () => {
     const name = customName.trim();
     const lat = parseFloat(customLat);
@@ -522,18 +549,39 @@ const Dashboard = () => {
 
         {/* Intelligence Hub */}
         <div className="glass p-8 rounded-[2.5rem] border border-white/10 flex flex-col">
-          <h3 className="text-xl font-black text-white mb-6 flex items-center">
-            <Shield className="w-5 h-5 mr-2 text-emerald-400" />
-            Actionable Intelligence
-          </h3>
-          <div className="space-y-4">
-            <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start space-x-4">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-1" />
-              <div>
-                <p className="text-sm font-bold text-white">System Synchronized</p>
-                <p className="text-xs text-slate-500">Live feed active for {selectedRegions.length} sectors.</p>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-black text-white flex items-center">
+              <Shield className="w-5 h-5 mr-2 text-emerald-400" />
+              AI Insights Hub
+            </h3>
+            <button 
+              onClick={generateAIReport} 
+              disabled={isGeneratingReport}
+              className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/50 rounded-xl text-indigo-300 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGeneratingReport ? 'Generating...' : '✨ Generate AI Report'}
+            </button>
+          </div>
+          <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            {!aiReport && !isGeneratingReport && (
+              <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start space-x-4">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-1" />
+                <div>
+                  <p className="text-sm font-bold text-white">System Synchronized</p>
+                  <p className="text-xs text-slate-500">Live feed active for {selectedRegions.length} sectors. Click 'Generate' for AI analysis.</p>
+                </div>
               </div>
-            </div>
+            )}
+            {isGeneratingReport && (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {aiReport && !isGeneratingReport && (
+              <div className="p-4 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
+                {aiReport}
+              </div>
+            )}
           </div>
         </div>
       </div>
