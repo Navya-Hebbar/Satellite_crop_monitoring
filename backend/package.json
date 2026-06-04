@@ -4,7 +4,11 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "export-dataset": "node scripts/exportDatasetToCsv.js",
+    "export-forecast-dataset": "node scripts/exportForecastDatasetToCsv.js",
+    "export-forecast-extended": "node scripts/exportExtendedForecastDataset.js",
+    "check-gee": "node scripts/checkGeeAuth.js"
   },
   "dependencies": {
     "@google/earthengine": "^0.1.411",

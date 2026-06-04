@@ -1,0 +1,23 @@
+/** Karnataka districts — matches backend EXTENDED_FORECAST_LOCATIONS */
+export const DASHBOARD_LOCATIONS = [
+  { name: 'Bangalore', lat: 12.9716, lng: 77.5946 },
+  { name: 'Mysore', lat: 12.2958, lng: 76.6394 },
+  { name: 'Mandya', lat: 12.5218, lng: 76.8951 },
+  { name: 'Tumkur', lat: 13.3409, lng: 77.101 },
+  { name: 'Hassan', lat: 13.0033, lng: 76.1004 },
+  { name: 'Kolar', lat: 13.1363, lng: 78.1291 },
+  { name: 'Chikkaballapur', lat: 13.4355, lng: 77.7315 },
+  { name: 'Ramanagara', lat: 12.7233, lng: 77.2798 },
+  { name: 'Shivamogga', lat: 13.9299, lng: 75.5681 },
+  { name: 'Davanagere', lat: 14.4644, lng: 75.9218 },
+  { name: 'Chitradurga', lat: 14.2226, lng: 76.398 },
+  { name: 'Belagavi', lat: 15.8497, lng: 74.4977 },
+  { name: 'Dharwad', lat: 15.4589, lng: 75.0078 },
+  { name: 'Hubli', lat: 15.3647, lng: 75.124 },
+  { name: 'Raichur', lat: 16.2076, lng: 77.3463 },
+  { name: 'Koppal', lat: 15.35, lng: 76.15 },
+  { name: 'Ballari', lat: 15.1394, lng: 76.9214 },
+  { name: 'Vijayapura', lat: 16.8302, lng: 75.71 },
+  { name: 'Kalaburagi', lat: 17.3297, lng: 76.8343 },
+  { name: 'Chamarajanagar', lat: 11.9261, lng: 76.9437 },
+];

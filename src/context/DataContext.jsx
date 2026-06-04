@@ -59,6 +59,8 @@ export const DataProvider = ({ children }) => {
         return {
           date: `${start.split('-')[0]}-${String(i + 1).padStart(2, '0')}-01`,
           ndvi: val,
+          temperature: 22 + Math.random() * 12,
+          rainfall: Math.random() * 80,
           status: classifyNDVI(val)
         };
       });
