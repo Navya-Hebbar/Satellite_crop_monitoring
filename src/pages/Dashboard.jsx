@@ -623,50 +623,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 print:hidden">
-        {/* Environmental Overlay */}
-        <div className="glass p-8 rounded-[2.5rem] border border-white/10">
-          <h3 className="text-xl font-black text-white mb-6 flex items-center">
-            <Droplets className="w-5 h-5 mr-2 text-blue-400" />
-            Environmental Factors ({selectedRegions[0]})
-          </h3>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={envData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="date" stroke="#475569" fontSize={10} />
-                <YAxis yAxisId="left" stroke="#3b82f6" fontSize={10} width={40} />
-                <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={10} width={40} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} itemStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
-                <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '10px' }} />
-                <Bar yAxisId="left" dataKey="rainfall" name="Rainfall (mm)" fill="#3b82f6" fillOpacity={0.6} radius={[4, 4, 0, 0]} />
-                <Line yAxisId="right" type="monotone" dataKey="temperature" name="Temperature (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* NDVI vs Rainfall Scatter */}
-        <div className="glass p-8 rounded-[2.5rem] border border-white/10">
-          <h3 className="text-xl font-black text-white mb-6 flex items-center">
-            <Activity className="w-5 h-5 mr-2 text-emerald-400" />
-            Rainfall to NDVI Correlation
-          </h3>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis type="number" dataKey="rainfall" name="Rainfall" stroke="#475569" fontSize={10} tickFormatter={v => `${v}mm`} />
-                <YAxis type="number" dataKey="ndvi" name="NDVI" stroke="#475569" fontSize={10} domain={['auto', 'auto']} />
-                <ZAxis type="number" range={[40, 40]} />
-                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} itemStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
-                <Scatter name="Correlation" data={envData} fill="#10b981" opacity={0.7} />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
       {/* Log Registry - Hidden from report to keep it concise */}
       <div className="glass rounded-[2.5rem] border border-white/10 overflow-hidden print:hidden">
         <div className="px-8 py-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 gap-4">
