@@ -2,37 +2,62 @@ import { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, Legend
+  AreaChart, Area, Legend, ComposedChart, Bar, ScatterChart, Scatter, ZAxis
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Activity, Map as MapIcon,
   Calendar, Info, Plus, Trash2, Monitor, AlertTriangle,
   ArrowUpRight, CheckCircle2, AlertCircle, Shield,
-  History, FileText, MapPin, X
+  History, FileText, MapPin, X, Droplets
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import TacticalLog from '../components/TacticalLog';
 
-const KPICard = ({ title, value, subValue, icon: Icon, color }) => (
-  <motion.div
-    whileHover={{ y: -5 }}
-    className="glass p-6 rounded-3xl border border-white/10 relative overflow-hidden group"
-  >
-    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-      <Icon className="w-12 h-12" />
-    </div>
-    <div className="flex items-center space-x-4 mb-4">
-      <div className={`p-3 bg-white/5 rounded-2xl border border-white/10 ${color}`}>
-        <Icon className="w-6 h-6" />
+const KPICard = ({ title, value, subValue, icon: Icon, color }) => {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-100, 100], [10, -10]);
+  const rotateY = useTransform(x, [-100, 100], [-10, 10]);
+
+  return (
+    <motion.div
+      style={{ rotateX, rotateY, perspective: 1000 }}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        x.set(e.clientX - rect.left - rect.width / 2);
+        y.set(e.clientY - rect.top - rect.height / 2);
+      }}
+      onMouseLeave={() => {
+        x.set(0);
+        y.set(0);
+      }}
+      className="glass p-6 rounded-3xl border border-white/10 relative overflow-hidden group cursor-crosshair glow-card"
+    >
+      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <Icon className="w-12 h-12" />
       </div>
-      <div>
-        <p className="text-[10px] text-slate-500 font-black tracking-widest uppercase">{title}</p>
-        <p className="text-2xl font-black text-white">{value}</p>
+      <div className="flex items-center space-x-4 mb-4 relative z-10">
+        <div className={`p-3 bg-white/5 rounded-2xl border border-white/10 glow-green ${color}`}>
+          <Icon className="w-6 h-6" />
+        </div>
+        <div>
+          <p className="text-[10px] text-slate-500 font-black tracking-widest uppercase">{title}</p>
+          <p className="text-2xl font-black text-white matrix-text">{value}</p>
+        </div>
       </div>
-    </div>
-    <p className="text-xs text-slate-400 font-medium">{subValue}</p>
-  </motion.div>
-);
+      <p className="text-xs text-slate-400 font-medium relative z-10">{subValue}</p>
+
+      {/* Glare effect */}
+      <motion.div
+        className="absolute inset-0 z-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+        style={{
+          x: useTransform(x, [-100, 100], [-50, 50]),
+          y: useTransform(y, [-100, 100], [-50, 50]),
+        }}
+      />
+    </motion.div>
+  );
+};
 
 const Dashboard = () => {
   const {
@@ -137,7 +162,7 @@ const Dashboard = () => {
 
   const comparisonData = useMemo(() => {
     if (!selectedRegions || selectedRegions.length === 0) return [];
-    
+
     const dateMap = {};
 
     selectedRegions.forEach(region => {
@@ -156,7 +181,7 @@ const Dashboard = () => {
             const yDate = new Date(d.date);
             yDate.setFullYear(yDate.getFullYear() + 1);
             const shiftedDateStr = yDate.toISOString().split('T')[0];
-            
+
             if (!dateMap[shiftedDateStr]) dateMap[shiftedDateStr] = { date: shiftedDateStr };
             dateMap[shiftedDateStr][`${region} (Prev Year)`] = d.ndvi;
           });
@@ -166,6 +191,16 @@ const Dashboard = () => {
 
     return Object.values(dateMap).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [allRegionsData, selectedRegions, showYoY, yoyDataMap]);
+
+  const envData = useMemo(() => {
+    if (!selectedRegions || selectedRegions.length === 0 || !allRegionsData[selectedRegions[0]]) return [];
+    return allRegionsData[selectedRegions[0]].map(d => ({
+      date: new Date(d.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+      rainfall: d.rainfall != null ? Number(d.rainfall.toFixed(1)) : 0,
+      temperature: d.temperature != null ? Number(d.temperature.toFixed(1)) : 0,
+      ndvi: d.ndvi != null ? Number(d.ndvi.toFixed(3)) : 0
+    }));
+  }, [allRegionsData, selectedRegions]);
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -181,7 +216,9 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+    <>
+      {/* --- DASHBOARD VIEW (HIDDEN ON PRINT) --- */}
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 print:hidden">
 
       {/* Custom Location Modal */}
       <AnimatePresence>
@@ -257,7 +294,7 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
       {/* Slot Selection & Mission Parameters */}
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-8 print:hidden">
         <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6">
           <div className="flex flex-wrap items-center gap-3">
             <AnimatePresence mode="popLayout">
@@ -434,7 +471,7 @@ const Dashboard = () => {
               </h3>
               <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest">Multi-spectral temporal distribution</p>
             </div>
-            <button 
+            <button
               onClick={() => setShowYoY(!showYoY)}
               className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showYoY ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
             >
@@ -443,7 +480,7 @@ const Dashboard = () => {
             </button>
           </div>
 
-          <div className="h-[350px] w-full">
+          <div className="h-[350px] w-full relative">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={comparisonData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -453,11 +490,11 @@ const Dashboard = () => {
                   fontSize={10}
                   tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                 />
-                <YAxis 
-                  stroke="#475569" 
-                  fontSize={10} 
-                  domain={[0.2, 1]} 
-                  tickFormatter={(val) => Number(val).toFixed(2)} 
+                <YAxis
+                  stroke="#475569"
+                  fontSize={10}
+                  domain={[0.2, 1]}
+                  tickFormatter={(val) => Number(val).toFixed(2)}
                 />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
@@ -477,11 +514,11 @@ const Dashboard = () => {
                   />
                 ))}
                 {showYoY && selectedRegions.map((region, idx) => (
-                  <Line 
+                  <Line
                     key={`${region} (Prev Year)`}
-                    type="monotone" 
-                    dataKey={`${region} (Prev Year)`} 
-                    stroke={COLORS[idx % COLORS.length]} 
+                    type="monotone"
+                    dataKey={`${region} (Prev Year)`}
+                    stroke={COLORS[idx % COLORS.length]}
                     strokeWidth={1.5}
                     strokeDasharray="5 5"
                     dot={false}
@@ -554,8 +591,8 @@ const Dashboard = () => {
               <Shield className="w-5 h-5 mr-2 text-emerald-400" />
               AI Insights Hub
             </h3>
-            <button 
-              onClick={generateAIReport} 
+            <button
+              onClick={generateAIReport}
               disabled={isGeneratingReport}
               className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/50 rounded-xl text-indigo-300 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -586,22 +623,65 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Log Registry */}
-      <div className="glass rounded-[2.5rem] border border-white/10 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 print:hidden">
+        {/* Environmental Overlay */}
+        <div className="glass p-8 rounded-[2.5rem] border border-white/10">
+          <h3 className="text-xl font-black text-white mb-6 flex items-center">
+            <Droplets className="w-5 h-5 mr-2 text-blue-400" />
+            Environmental Factors ({selectedRegions[0]})
+          </h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={envData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="date" stroke="#475569" fontSize={10} />
+                <YAxis yAxisId="left" stroke="#3b82f6" fontSize={10} width={40} />
+                <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={10} width={40} />
+                <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} itemStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '10px' }} />
+                <Bar yAxisId="left" dataKey="rainfall" name="Rainfall (mm)" fill="#3b82f6" fillOpacity={0.6} radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="temperature" name="Temperature (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* NDVI vs Rainfall Scatter */}
+        <div className="glass p-8 rounded-[2.5rem] border border-white/10">
+          <h3 className="text-xl font-black text-white mb-6 flex items-center">
+            <Activity className="w-5 h-5 mr-2 text-emerald-400" />
+            Rainfall to NDVI Correlation
+          </h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis type="number" dataKey="rainfall" name="Rainfall" stroke="#475569" fontSize={10} tickFormatter={v => `${v}mm`} />
+                <YAxis type="number" dataKey="ndvi" name="NDVI" stroke="#475569" fontSize={10} domain={['auto', 'auto']} />
+                <ZAxis type="number" range={[40, 40]} />
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} itemStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                <Scatter name="Correlation" data={envData} fill="#10b981" opacity={0.7} />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Log Registry - Hidden from report to keep it concise */}
+      <div className="glass rounded-[2.5rem] border border-white/10 overflow-hidden print:hidden">
         <div className="px-8 py-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 gap-4">
           <h3 className="text-xl font-black text-white uppercase tracking-tight">Spectral Log Registry</h3>
-          
+
           {/* Tabs for Regions */}
           <div className="flex flex-wrap gap-2">
             {selectedRegions.map((region) => (
               <button
                 key={region}
                 onClick={() => setActiveLogRegion(region)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                  currentLogRegion === region 
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' 
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${currentLogRegion === region
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
                     : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                }`}
+                  }`}
               >
                 {region}
               </button>
@@ -622,7 +702,7 @@ const Dashboard = () => {
               {Array.isArray(logData) && logData.map((row, idx) => (
                 <tr key={idx} className="hover:bg-white/5 transition-colors">
                   <td className="px-8 py-4 text-slate-400">{row.date}</td>
-                  <td className="px-8 py-4 text-white font-bold">{row.ndvi.toFixed(4)}</td>
+                  <td className="px-8 py-4 text-white font-bold matrix-text">{row.ndvi.toFixed(4)}</td>
                   <td className="px-8 py-4">
                     <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' : 'border-red-500/20 text-red-400'
                       }`}>
@@ -639,11 +719,112 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Tactical Log */}
-      <div className="h-[300px]">
+      {/* Tactical Log - Hidden from report */}
+      <div className="h-[300px] print:hidden">
         <TacticalLog />
       </div>
     </div>
+
+      {/* --- FORMAL PRINT REPORT VIEW --- */}
+      <div className="hidden print:block font-serif text-black bg-white min-h-screen relative pt-8 pb-16 px-4">
+        
+        {/* Repeating Footer */}
+        <div className="fixed bottom-0 left-0 right-0 flex justify-between text-[10px] text-gray-400 border-t border-gray-200 pt-3 pb-4 bg-white font-sans">
+          <span className="font-semibold">SatCrop Intelligence Platform</span>
+          <span>Generated: {new Date().toLocaleDateString()}</span>
+        </div>
+
+        {/* Report Header */}
+        <div className="border-b-2 border-black pb-6 mb-8 text-center">
+          <h1 className="text-3xl font-bold uppercase tracking-widest text-black">SatCrop Analytical Report</h1>
+          <p className="mt-2 text-gray-600 font-sans text-sm">Automated Crop Health & Environmental Synthesis</p>
+        </div>
+
+        {/* Mission Parameters */}
+        <div className="mb-10 font-sans">
+          <div className="grid grid-cols-2 gap-4 border border-gray-300 p-4">
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-bold">Analysis Period</p>
+              <p className="text-sm font-semibold">{startDate} to {endDate}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-bold">Target Regions</p>
+              <p className="text-sm font-semibold">{selectedRegions.join(', ')}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-bold">Scan Resolution</p>
+              <p className="text-sm font-semibold">{bufferSize}m Buffer</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-bold">Mission Status</p>
+              <p className="text-sm font-semibold text-emerald-700">{selectedRegions.length > 1 ? 'Multi-Sector Benchmark' : 'Single Grid Recon'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Executive Summary */}
+        <div className="mb-12">
+          <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-1 text-black">1. Executive Summary</h2>
+          <div className="grid grid-cols-4 gap-4 mb-6 font-sans">
+            <div className="border border-gray-200 p-3 bg-gray-50">
+              <p className="text-[10px] text-gray-500 uppercase font-bold">Average Health</p>
+              <p className="text-lg font-bold text-emerald-700">{stats.avg}</p>
+              <p className="text-[10px] uppercase font-bold text-emerald-600">{stats.currentStatus}</p>
+            </div>
+            <div className="border border-gray-200 p-3 bg-gray-50">
+              <p className="text-[10px] text-gray-500 uppercase font-bold">Peak NDVI</p>
+              <p className="text-lg font-bold">{stats.max}</p>
+            </div>
+            <div className="border border-gray-200 p-3 bg-gray-50">
+              <p className="text-[10px] text-gray-500 uppercase font-bold">Min Index</p>
+              <p className="text-lg font-bold text-red-600">{stats.min}</p>
+            </div>
+            <div className="border border-gray-200 p-3 bg-gray-50">
+              <p className="text-[10px] text-gray-500 uppercase font-bold">Active Sectors</p>
+              <p className="text-lg font-bold">{selectedRegions.length}</p>
+            </div>
+          </div>
+          <div className="border border-gray-300 p-5 bg-blue-50/30 text-sm font-sans leading-relaxed">
+            <h3 className="font-bold text-indigo-900 mb-2 border-b border-indigo-100 pb-2">AI Diagnostic Insights</h3>
+            <div className="whitespace-pre-wrap text-gray-800">
+              {aiReport ? aiReport : "No AI insights generated. Click 'Generate AI Report' on the dashboard prior to export."}
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="mb-12 break-inside-avoid">
+           <h2 className="text-xl font-bold mb-6 border-b border-gray-300 pb-1 text-black">2. Temporal NDVI Analysis</h2>
+           <div className="mx-auto" style={{ width: '750px', height: '350px' }}>
+             <LineChart data={comparisonData} width={750} height={350} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
+               <XAxis dataKey="date" stroke="#000" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+               <YAxis stroke="#000" fontSize={11} domain={[0.2, 1]} />
+               <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
+               {selectedRegions.map((region, idx) => (
+                 <Line key={region} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
+               ))}
+             </LineChart>
+           </div>
+        </div>
+
+        <div className="mb-12 break-inside-avoid">
+           <h2 className="text-xl font-bold mb-6 border-b border-gray-300 pb-1 text-black">3. Environmental Overlay ({selectedRegions[0]})</h2>
+           <div className="mx-auto" style={{ width: '750px', height: '350px' }}>
+             <ComposedChart data={envData} width={750} height={350} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
+               <XAxis dataKey="date" stroke="#000" fontSize={11} />
+               <YAxis yAxisId="left" stroke="#3b82f6" fontSize={11} width={40} />
+               <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={11} width={40} />
+               <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
+               <Bar yAxisId="left" dataKey="rainfall" name="Rainfall (mm)" fill="#3b82f6" fillOpacity={0.6} isAnimationActive={false} />
+               <Line yAxisId="right" type="monotone" dataKey="temperature" name="Temperature (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} isAnimationActive={false} />
+             </ComposedChart>
+           </div>
+        </div>
+
+      </div>
+    </>
   );
 };
 

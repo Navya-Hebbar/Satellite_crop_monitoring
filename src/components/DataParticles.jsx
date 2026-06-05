@@ -1,5 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 
 const DataParticles = ({ count = 1000 }) => {
@@ -29,8 +31,9 @@ const DataParticles = ({ count = 1000 }) => {
       const a = Math.cos(t) + Math.sin(t * 1) / 10;
       const b = Math.sin(t) + Math.cos(t * 2) / 10;
       const s = Math.cos(t);
-      particle.mx += (state.mouse.x * 1000 - particle.mx) * 0.01;
-      particle.my += (state.mouse.y * 1000 - particle.my) * 0.01;
+      // Increased mouse responsiveness for aggressive physics
+      particle.mx += (state.mouse.x * 2500 - particle.mx) * 0.05;
+      particle.my += (state.mouse.y * 2500 - particle.my) * 0.05;
       dummy.position.set(
         (particle.mx / 10) * a + xFactor + Math.cos((t / 10) * factor) + (Math.sin(t * 1) * factor) / 10,
         (particle.my / 10) * b + yFactor + Math.sin((t / 10) * factor) + (Math.cos(t * 2) * factor) / 10,
@@ -46,11 +49,20 @@ const DataParticles = ({ count = 1000 }) => {
 
   return (
     <>
-      <pointLight ref={light} distance={40} intensity={8} color="lightblue" />
+      <pointLight ref={light} distance={60} intensity={15} color="#10b981" />
       <instancedMesh ref={mesh} args={[null, null, count]}>
         <dodecahedronGeometry args={[0.2, 0]} />
-        <meshPhongMaterial color="#10b981" />
+        <meshStandardMaterial color="#34d399" emissive="#10b981" emissiveIntensity={4} />
       </instancedMesh>
+      
+      <EffectComposer multisampling={4}>
+        <Bloom 
+          intensity={2.5} 
+          luminanceThreshold={0.1} 
+          luminanceSmoothing={0.9} 
+          blendFunction={BlendFunction.SCREEN} 
+        />
+      </EffectComposer>
     </>
   );
 };

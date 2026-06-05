@@ -4,7 +4,6 @@ import { ArrowRight, BarChart3, Map as MapIcon, Upload, Info, Satellite, Zap } f
 import { Canvas } from '@react-three/fiber';
 import { Suspense } from 'react';
 import SatelliteGlobe from '../components/SatelliteGlobe';
-import DataParticles from '../components/DataParticles';
 import ScannerHUD from '../components/ScannerHUD';
 
 const Home = () => {
@@ -16,16 +15,7 @@ const Home = () => {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020617]">
-      {/* Background 3D Particles */}
-      <div className="fixed inset-0 z-0 opacity-40">
-        <Canvas camera={{ position: [0, 0, 50], fov: 75 }}>
-          <Suspense fallback={null}>
-            <DataParticles count={500} />
-          </Suspense>
-        </Canvas>
-      </div>
-
+    <div className="relative min-h-screen overflow-hidden bg-transparent">
       <div className="relative z-10">
         {/* Hero Section */}
         <section className="relative pt-20 pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -97,7 +87,7 @@ const Home = () => {
           <div className="glass rounded-[3rem] overflow-hidden border border-white/10 relative min-h-[850px] flex flex-col justify-center shadow-2xl transition-all duration-500">
             <ScannerHUD />
             
-            <div className="absolute inset-0 z-0">
+            <div className="absolute inset-0 lg:left-[40%] z-0">
               <Canvas camera={{ position: [0, 0, 4.5] }}>
                 <Suspense fallback={null}>
                   <SatelliteGlobe />
@@ -119,9 +109,9 @@ const Home = () => {
                   </h2>
                   <div className="space-y-10 max-w-xl">
                     {[
-                      { title: 'Full Spectrum Analysis', desc: 'Multi-band processing for early disease detection and soil moisture profiling.' },
-                      { title: 'Sub-meter Resolution', desc: 'Precision tracking down to the leaf level with high-frequency revisit cycles.' },
-                      { title: 'AI-Powered Forecasting', desc: 'Predictive yield modeling using historical trends and real-time climatic data.' }
+                      { title: 'Live GEE Integration', desc: 'Directly querying Copernicus Sentinel-2 satellite data via Google Earth Engine.' },
+                      { title: 'Interactive Target Analysis', desc: 'Search or click any region on the globe to calculate real-time localized vegetation health.' },
+                      { title: 'AI Agronomist Reports', desc: 'Automated professional crop analysis and actionable recommendations powered by Gemini AI.' }
                     ].map((item, i) => (
                       <div key={i} className="flex items-start space-x-6 group">
                         <div className="mt-1 w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/40 transition-all duration-300">
