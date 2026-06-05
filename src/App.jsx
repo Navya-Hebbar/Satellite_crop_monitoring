@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import ForecastDashboard from './pages/ForecastDashboard';
 import MapView from './pages/MapView';
 import UploadData from './pages/UploadData';
 import About from './pages/About';
@@ -16,6 +17,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="forecast" element={<ForecastDashboard />} />
             <Route path="lab" element={<SpectralLab />} />
             <Route path="map" element={<MapView />} />
             <Route path="upload" element={<UploadData />} />

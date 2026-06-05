@@ -1,6 +1,8 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Sphere, MeshDistortMaterial, Float, PerspectiveCamera } from '@react-three/drei';
+import { Sphere, MeshDistortMaterial, Float, PerspectiveCamera, Trail } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 
 const SatelliteGlobe = () => {
@@ -23,12 +25,26 @@ const SatelliteGlobe = () => {
 
   return (
     <group>
-      <PerspectiveCamera makeDefault position={[0, 0, 5]} />
+      <PerspectiveCamera makeDefault position={[0, 0, 5.5]} />
       <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1.5} color="#10b981" />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#0ea5e9" />
+      <pointLight position={[10, 10, 10]} intensity={2.5} color="#10b981" />
+      <pointLight position={[-10, -10, -10]} intensity={1.5} color="#0ea5e9" />
 
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+      {/* Post Processing Effects */}
+      <EffectComposer multisampling={4}>
+        <Bloom 
+          intensity={1.5} 
+          luminanceThreshold={0.2} 
+          luminanceSmoothing={0.9} 
+          blendFunction={BlendFunction.SCREEN} 
+        />
+        <ChromaticAberration 
+          offset={[0.002, 0.002]} 
+          blendFunction={BlendFunction.NORMAL} 
+        />
+      </EffectComposer>
+
+      <group>
         {/* Core Globe */}
         <mesh ref={globeRef}>
           <sphereGeometry args={[2, 64, 64]} />
@@ -73,7 +89,7 @@ const SatelliteGlobe = () => {
         {[0, 1, 2].map((i) => (
           <SatelliteMarker key={i} index={i} />
         ))}
-      </Float>
+      </group>
     </group>
   );
 };
@@ -90,11 +106,18 @@ const SatelliteMarker = ({ index }) => {
   });
 
   return (
-    <mesh ref={satRef}>
-      <boxGeometry args={[0.1, 0.1, 0.1]} />
-      <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={5} />
-      <pointLight intensity={2} distance={1} color="#fbbf24" />
-    </mesh>
+    <Trail
+      width={1.5}
+      length={15}
+      color={new THREE.Color(2, 10, 2)}
+      attenuation={(t) => t * t}
+    >
+      <mesh ref={satRef}>
+        <boxGeometry args={[0.15, 0.15, 0.15]} />
+        <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={5} />
+        <pointLight intensity={3} distance={2} color="#fbbf24" />
+      </mesh>
+    </Trail>
   );
 };
 

@@ -23,7 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# GEE Credentials
 backend/gee-key.json
+**/gee-key.json
+*-gee-sa.json
+*-service-account*.json
 .env
 backend/.env
+!.env.example
+!backend/.env.example
+forecast_dataset.csv

@@ -1,7 +1,9 @@
 import { useState, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { Float, MeshDistortMaterial, Sphere, OrbitControls, Text } from '@react-three/drei';
+import { Float, MeshDistortMaterial, Sphere, OrbitControls } from '@react-three/drei';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
 import { Beaker, Zap, Info, RefreshCw, BarChart } from 'lucide-react';
 
 const SpectralLab = () => {
@@ -64,8 +66,8 @@ const SpectralLab = () => {
             <div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-2xl">
               <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4 text-center">NDVI Formula Output</div>
               <div className="flex justify-center items-center space-x-4">
-                <div className="text-4xl font-black text-white">{ndvi.toFixed(3)}</div>
-                <div className={`px-3 py-1 rounded-md text-[10px] font-black border ${healthColor}`}>
+                <div className="text-4xl font-black text-white matrix-text">{ndvi.toFixed(3)}</div>
+                <div className={`px-3 py-1 rounded-md text-[10px] font-black border ${healthColor} shadow-[0_0_15px_currentColor]`}>
                   {healthStatus}
                 </div>
               </div>
@@ -136,14 +138,23 @@ const Scene = ({ red, nir, ndvi }) => {
         <Sphere args={[1, 64, 64]}>
           <MeshDistortMaterial 
             color={ndvi > 0.6 ? "#10b981" : ndvi > 0.3 ? "#eab308" : "#ef4444"}
-            speed={2} 
-            distort={0.4} 
+            speed={3} 
+            distort={0.6} 
             radius={1}
-            emissive={ndvi > 0.6 ? "#10b981" : "#000"}
-            emissiveIntensity={0.5}
+            emissive={ndvi > 0.6 ? "#10b981" : ndvi > 0.3 ? "#eab308" : "#ef4444"}
+            emissiveIntensity={2}
           />
         </Sphere>
       </Float>
+
+      <EffectComposer multisampling={4}>
+        <Bloom 
+          intensity={2.0} 
+          luminanceThreshold={0.1} 
+          luminanceSmoothing={0.9} 
+          blendFunction={BlendFunction.SCREEN} 
+        />
+      </EffectComposer>
     </group>
   );
 };

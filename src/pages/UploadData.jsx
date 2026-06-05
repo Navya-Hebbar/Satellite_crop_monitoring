@@ -67,14 +67,14 @@ const UploadData = () => {
         <p className="text-slate-400">Import your custom NDVI datasets for advanced analysis.</p>
       </motion.div>
 
-      <div className="glass p-12 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+      <div className="glass p-12 rounded-[2.5rem] border border-white/10 relative overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.1)] group/panel">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none opacity-50 group-hover/panel:opacity-100 transition-opacity duration-700" />
         
         <div className="relative z-10 flex flex-col items-center">
           {!file ? (
-            <label className="w-full flex flex-col items-center justify-center h-64 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:bg-white/5 hover:border-emerald-500/50 transition-all group">
+            <label className="w-full flex flex-col items-center justify-center h-64 border-2 border-dashed border-white/20 rounded-3xl cursor-pointer hover:bg-emerald-500/5 hover:border-emerald-500 hover:shadow-[0_0_30px_rgba(16,185,129,0.2)] transition-all group">
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <div className="p-4 bg-emerald-500/10 rounded-2xl group-hover:scale-110 transition-transform mb-4">
+                <div className="p-4 bg-emerald-500/10 rounded-2xl group-hover:scale-110 group-hover:bg-emerald-500/20 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all mb-4">
                   <Upload className="w-10 h-10 text-emerald-400" />
                 </div>
                 <p className="mb-2 text-sm text-slate-300">
@@ -133,10 +133,10 @@ const UploadData = () => {
           <button
             onClick={handleUpload}
             disabled={!file || success}
-            className={`mt-10 px-12 py-4 rounded-xl font-bold transition-all flex items-center space-x-2 ${
+            className={`mt-10 px-12 py-4 rounded-xl font-bold transition-all duration-300 flex items-center space-x-2 ${
               !file || success
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:shadow-[0_0_50px_rgba(16,185,129,0.8)] hover:scale-105'
             }`}
           >
             <span>Process Data</span>

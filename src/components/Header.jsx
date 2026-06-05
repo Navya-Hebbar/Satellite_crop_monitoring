@@ -10,6 +10,7 @@ const Header = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Dashboard', path: '/dashboard' },
+    { name: 'NDVI Forecast', path: '/forecast' },
     { name: 'Spectral Lab', path: '/lab' },
     { name: 'Map View', path: '/map' },
     { name: 'About', path: '/about' },
@@ -21,7 +22,7 @@ const Header = () => {
   }, [location.pathname]);
 
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-white/10">
+    <nav className="sticky top-0 z-50 glass border-b border-white/10 print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2 group">
