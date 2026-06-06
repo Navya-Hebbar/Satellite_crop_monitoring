@@ -1,7 +1,7 @@
 import ee from '@google/earthengine';
 import { evaluate } from './cropDataset.js';
 
-const S2_COLLECTION = 'COPERNICUS/S2_SR';
+const S2_COLLECTION = 'COPERNICUS/S2_SR_HARMONIZED';
 const NDVI_SCALE_METERS = 10;
 
 /**

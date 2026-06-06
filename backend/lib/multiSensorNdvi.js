@@ -16,7 +16,7 @@ import ee from '@google/earthengine';
 import { evaluate } from './cropDataset.js';
 import { yearMonthKey } from './monthSeries.js';
 
-const S2_COLLECTION = 'COPERNICUS/S2_SR';
+const S2_COLLECTION = 'COPERNICUS/S2_SR_HARMONIZED';
 const MODIS_COLLECTION = 'MODIS/061/MOD13Q1';
 const L7 = 'LANDSAT/LE07/C02/T1_SR';
 const L8 = 'LANDSAT/LC08/C02/T1_SR';

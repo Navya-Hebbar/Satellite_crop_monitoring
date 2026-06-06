@@ -396,15 +396,25 @@ app.post('/api/generate-report', async (req, res) => {
     Recent data points (last 5 readings): 
     ${JSON.stringify((data || []).slice(-5))}
     
-    Write a short, highly professional 2-paragraph report analyzing this data. 
-    1. First paragraph: Summarize the crop health and any anomalies or trends.
-    2. Second paragraph: Provide actionable recommendations (e.g., irrigation, field inspection) based on the data.
-    Do not use markdown formatting like ** or *, just plain text paragraphs. Make it sound very scientific and authoritative.`;
+    Write a highly professional analysis of this data in JSON format exactly matching this schema:
+    {
+      "key_observations": ["observation 1", "observation 2", ...],
+      "possible_causes": ["cause 1", "cause 2", ...],
+      "recommended_actions": ["action 1", "action 2", ...]
+    }
+    
+    Make it sound very scientific and authoritative. Output ONLY valid JSON without any markdown code block wrapping.`;
 
     const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    let responseText = result.response.text();
+    responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
-    res.json({ report: responseText });
+    try {
+      const parsed = JSON.parse(responseText);
+      res.json({ report: parsed });
+    } catch (e) {
+      res.json({ report: { key_observations: [responseText], possible_causes: [], recommended_actions: [] } });
+    }
   } catch (error) {
     console.error('Gemini API Error:', error);
     res.status(500).json({ error: 'Failed to generate AI report.' });

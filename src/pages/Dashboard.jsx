@@ -4,14 +4,9 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Legend, ComposedChart, Bar, ScatterChart, Scatter, ZAxis
 } from 'recharts';
-import {
-  TrendingUp, TrendingDown, Activity, Map as MapIcon,
-  Calendar, Info, Plus, Trash2, Monitor, AlertTriangle,
-  ArrowUpRight, CheckCircle2, AlertCircle, Shield,
-  History, FileText, MapPin, X, Droplets
-} from 'lucide-react';
+import { FileText, Map, ShieldAlert, Cpu, Activity, Download, Layers, Calendar, CheckCircle2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import TacticalLog from '../components/TacticalLog';
 
 const KPICard = ({ title, value, subValue, icon: Icon, color }) => {
   const x = useMotionValue(0);
@@ -89,6 +84,7 @@ const Dashboard = () => {
 
   const [aiReport, setAiReport] = useState(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [printImages, setPrintImages] = useState({ comparison: null, env: null });
 
   const generateAIReport = async () => {
     setIsGeneratingReport(true);
@@ -137,8 +133,30 @@ const Dashboard = () => {
     setShowCustomModal(false);
   };
 
-  const exportToPDF = () => {
-    window.print();
+  const exportToPDF = async () => {
+    const compNode = document.getElementById('render-comp-chart');
+    const envNode = document.getElementById('render-env-chart');
+    
+    if (compNode && envNode) {
+      try {
+        const compCanvas = await html2canvas(compNode, { scale: 2, backgroundColor: '#ffffff' });
+        const envCanvas = await html2canvas(envNode, { scale: 2, backgroundColor: '#ffffff' });
+        
+        setPrintImages({
+          comparison: compCanvas.toDataURL('image/png'),
+          env: envCanvas.toDataURL('image/png')
+        });
+        
+        setTimeout(() => {
+          window.print();
+        }, 300);
+      } catch (err) {
+        console.error("Failed to capture charts for print", err);
+        window.print();
+      }
+    } else {
+      window.print();
+    }
   };
 
   const addSlot = () => {
@@ -200,6 +218,38 @@ const Dashboard = () => {
       temperature: d.temperature != null ? Number(d.temperature.toFixed(1)) : 0,
       ndvi: d.ndvi != null ? Number(d.ndvi.toFixed(3)) : 0
     }));
+  }, [allRegionsData, selectedRegions]);
+
+  const multiSeasonalTrends = useMemo(() => {
+    if (!selectedRegions || selectedRegions.length === 0) return [];
+
+    const monthsData = {};
+    const monthOrder = [];
+
+    selectedRegions.forEach(region => {
+      const regionData = allRegionsData[region];
+      if (regionData) {
+        regionData.forEach(row => {
+          const month = new Date(row.date).toLocaleString('default', { month: 'short' });
+          if (!monthsData[month]) {
+            monthsData[month] = { month };
+            monthOrder.push(month);
+          }
+          if (!monthsData[month][region]) monthsData[month][region] = [];
+          monthsData[month][region].push(row.ndvi);
+        });
+      }
+    });
+
+    return monthOrder.map(month => {
+      const newObj = { month };
+      selectedRegions.forEach(region => {
+        if (monthsData[month][region] && monthsData[month][region].length > 0) {
+          newObj[region] = monthsData[month][region].reduce((a, b) => a + b, 0) / monthsData[month][region].length;
+        }
+      });
+      return newObj;
+    });
   }, [allRegionsData, selectedRegions]);
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -564,21 +614,30 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="space-y-8">
         {/* Seasonal Trends */}
-        <div className="glass p-8 rounded-[2.5rem] border border-white/10">
+        <div className="glass p-8 rounded-[2.5rem] border border-white/10 w-full">
           <h3 className="text-xl font-black text-white mb-6 flex items-center">
             <Calendar className="w-5 h-5 mr-2 text-emerald-400" />
             Seasonal Performance
           </h3>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={seasonalTrends}>
+              <AreaChart data={multiSeasonalTrends}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis dataKey="month" stroke="#475569" fontSize={10} />
                 <YAxis stroke="#475569" fontSize={10} />
                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                <Area type="monotone" dataKey="avg" stroke="#10b981" fill="#10b981" fillOpacity={0.1} />
+                {selectedRegions.map((region, idx) => (
+                  <Area
+                    key={region}
+                    type="monotone"
+                    dataKey={region}
+                    stroke={COLORS[idx % COLORS.length]}
+                    fill={COLORS[idx % COLORS.length]}
+                    fillOpacity={0.1}
+                  />
+                ))}
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -614,9 +673,35 @@ const Dashboard = () => {
                 <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
               </div>
             )}
-            {aiReport && !isGeneratingReport && (
-              <div className="p-4 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
-                {aiReport}
+            {aiReport && !isGeneratingReport && typeof aiReport === 'object' && (
+              <div className="grid grid-cols-1 gap-6">
+                {/* KEY OBSERVATIONS */}
+                <div className="p-6 rounded-2xl border border-blue-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                  <h4 className="text-[11px] font-black uppercase text-blue-400 mb-4 tracking-widest">Key Observations</h4>
+                  <ul className="space-y-3">
+                    {aiReport.key_observations?.map((item, i) => (
+                      <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                {/* POSSIBLE CAUSES */}
+                <div className="p-6 rounded-2xl border border-yellow-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                  <h4 className="text-[11px] font-black uppercase text-yellow-400 mb-4 tracking-widest">Possible Causes</h4>
+                  <ul className="space-y-3">
+                    {aiReport.possible_causes?.map((item, i) => (
+                      <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                {/* RECOMMENDED ACTIONS */}
+                <div className="p-6 rounded-2xl border border-purple-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                  <h4 className="text-[11px] font-black uppercase text-purple-400 mb-4 tracking-widest">Recommended Actions</h4>
+                  <ul className="space-y-3">
+                    {aiReport.recommended_actions?.map((item, i) => (
+                      <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             )}
           </div>
@@ -660,9 +745,12 @@ const Dashboard = () => {
                   <td className="px-8 py-4 text-slate-400">{row.date}</td>
                   <td className="px-8 py-4 text-white font-bold matrix-text">{row.ndvi.toFixed(4)}</td>
                   <td className="px-8 py-4">
-                    <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' : 'border-red-500/20 text-red-400'
+                    <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${
+                        row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' :
+                        row.ndvi >= 0.3 ? 'border-yellow-500/20 text-yellow-400' :
+                        'border-red-500/20 text-red-400'
                       }`}>
-                      {row.ndvi > 0.6 ? 'Healthy' : 'Stress'}
+                      {row.ndvi > 0.6 ? 'Healthy' : row.ndvi >= 0.3 ? 'Moderate' : 'Stress'}
                     </span>
                   </td>
                   <td className="px-8 py-4 text-right">
@@ -675,10 +763,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Tactical Log - Hidden from report */}
-      <div className="h-[300px] print:hidden">
-        <TacticalLog />
-      </div>
     </div>
 
       {/* --- FORMAL PRINT REPORT VIEW --- */}
@@ -743,7 +827,18 @@ const Dashboard = () => {
           <div className="border border-gray-300 p-5 bg-blue-50/30 text-sm font-sans leading-relaxed">
             <h3 className="font-bold text-indigo-900 mb-2 border-b border-indigo-100 pb-2">AI Diagnostic Insights</h3>
             <div className="whitespace-pre-wrap text-gray-800">
-              {aiReport ? aiReport : "No AI insights generated. Click 'Generate AI Report' on the dashboard prior to export."}
+              {aiReport ? (
+                typeof aiReport === 'object' ? (
+                  <>
+                    <p className="font-bold mb-1 mt-2">Key Observations:</p>
+                    <ul className="list-disc pl-5 mb-3">{aiReport.key_observations?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                    <p className="font-bold mb-1">Possible Causes:</p>
+                    <ul className="list-disc pl-5 mb-3">{aiReport.possible_causes?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                    <p className="font-bold mb-1">Recommended Actions:</p>
+                    <ul className="list-disc pl-5">{aiReport.recommended_actions?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  </>
+                ) : aiReport
+              ) : "No AI insights generated. Click 'Generate AI Report' on the dashboard prior to export."}
             </div>
           </div>
         </div>
@@ -751,23 +846,57 @@ const Dashboard = () => {
         {/* Charts Section */}
         <div className="mb-12 break-inside-avoid">
            <h2 className="text-xl font-bold mb-6 border-b border-gray-300 pb-1 text-black">2. Temporal NDVI Analysis</h2>
-           <div className="mx-auto" style={{ width: '750px', height: '350px' }}>
-             <LineChart data={comparisonData} width={750} height={350} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
-               <XAxis dataKey="date" stroke="#000" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
-               <YAxis stroke="#000" fontSize={11} domain={[0.2, 1]} />
-               <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
-               {selectedRegions.map((region, idx) => (
-                 <Line key={region} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
-               ))}
-             </LineChart>
+           <div className="mx-auto flex justify-center" style={{ width: '100%', height: '300px' }}>
+             {printImages.comparison ? (
+               <img src={printImages.comparison} alt="Temporal Analysis Chart" style={{ width: '650px', height: '300px', objectFit: 'contain' }} />
+             ) : (
+               <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                 <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
+                 <XAxis dataKey="date" stroke="#000" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+                 <YAxis stroke="#000" fontSize={11} domain={[0.2, 1]} />
+                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
+                 {selectedRegions.map((region, idx) => (
+                   <Line key={region} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
+                 ))}
+               </LineChart>
+             )}
            </div>
         </div>
 
         <div className="mb-12 break-inside-avoid">
            <h2 className="text-xl font-bold mb-6 border-b border-gray-300 pb-1 text-black">3. Environmental Overlay ({selectedRegions[0]})</h2>
-           <div className="mx-auto" style={{ width: '750px', height: '350px' }}>
-             <ComposedChart data={envData} width={750} height={350} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+           <div className="mx-auto flex justify-center" style={{ width: '100%', height: '300px' }}>
+             {printImages.env ? (
+               <img src={printImages.env} alt="Environmental Overlay Chart" style={{ width: '650px', height: '300px', objectFit: 'contain' }} />
+             ) : (
+               <ComposedChart data={envData} width={650} height={300} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                 <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
+                 <XAxis dataKey="date" stroke="#000" fontSize={11} />
+                 <YAxis yAxisId="left" stroke="#3b82f6" fontSize={11} width={40} />
+                 <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={11} width={40} />
+                 <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
+                 <Bar yAxisId="left" dataKey="rainfall" name="Rainfall (mm)" fill="#3b82f6" fillOpacity={0.6} isAnimationActive={false} />
+                 <Line yAxisId="right" type="monotone" dataKey="temperature" name="Temperature (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} isAnimationActive={false} />
+               </ComposedChart>
+             )}
+           </div>
+        </div>
+
+        {/* Off-screen Render Targets for Image Capture */}
+        <div className="fixed top-0 left-[-9999px] opacity-0 pointer-events-none bg-white">
+          <div id="render-comp-chart" style={{ width: '650px', height: '300px', padding: '10px' }}>
+            <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
+               <XAxis dataKey="date" stroke="#000" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+               <YAxis stroke="#000" fontSize={11} domain={[0.2, 1]} />
+               <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
+               {selectedRegions.map((region, idx) => (
+                 <Line key={`render-${region}`} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
+               ))}
+             </LineChart>
+          </div>
+          <div id="render-env-chart" style={{ width: '650px', height: '300px', padding: '10px' }}>
+             <ComposedChart data={envData} width={650} height={300} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
                <XAxis dataKey="date" stroke="#000" fontSize={11} />
                <YAxis yAxisId="left" stroke="#3b82f6" fontSize={11} width={40} />
@@ -776,7 +905,7 @@ const Dashboard = () => {
                <Bar yAxisId="left" dataKey="rainfall" name="Rainfall (mm)" fill="#3b82f6" fillOpacity={0.6} isAnimationActive={false} />
                <Line yAxisId="right" type="monotone" dataKey="temperature" name="Temperature (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} isAnimationActive={false} />
              </ComposedChart>
-           </div>
+          </div>
         </div>
 
       </div>

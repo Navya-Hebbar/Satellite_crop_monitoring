@@ -1,7 +1,7 @@
 import ee from '@google/earthengine';
 import { buildMonthGrid } from './monthSeries.js';
 
-const S2_COLLECTION = 'COPERNICUS/S2_SR';
+const S2_COLLECTION = 'COPERNICUS/S2_SR_HARMONIZED';
 const ERA5_COLLECTION = 'ECMWF/ERA5_LAND/DAILY_AGGR';
 const ERA5_SCALE_METERS = 11132;
 const NDVI_SCALE_METERS = 10;
