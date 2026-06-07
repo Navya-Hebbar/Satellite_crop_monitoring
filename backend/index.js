@@ -374,7 +374,7 @@ app.get('/api/export-dataset', (req, res) => {
 
 app.post('/api/generate-report', async (req, res) => {
   try {
-    const { stats, selectedRegions, data } = req.body;
+    const { stats, allRegionsStats, selectedRegions, dataMap } = req.body;
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -384,17 +384,27 @@ app.post('/api/generate-report', async (req, res) => {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
+    let regionsText = '';
+    if (allRegionsStats && selectedRegions) {
+      regionsText = selectedRegions.map(r => 
+        `- ${r}: Avg: ${allRegionsStats[r]?.avg}, Max: ${allRegionsStats[r]?.max}, Status: ${allRegionsStats[r]?.currentStatus}`
+      ).join('\n    ');
+    }
+
     const prompt = `You are an expert agronomist AI analyzing satellite crop data (NDVI).
-    The user is monitoring the following regions: ${selectedRegions.join(', ')}.
+    The user is monitoring the following regions: ${(selectedRegions || []).join(', ')}.
     
-    Overall stats for the primary region (${selectedRegions[0]}):
-    - Average NDVI: ${stats.avg}
-    - Max NDVI: ${stats.max}
-    - Min NDVI: ${stats.min}
-    - Status: ${stats.currentStatus}
+    Overall aggregated stats across all regions:
+    - Average NDVI: ${stats?.avg}
+    - Max NDVI: ${stats?.max}
+    - Min NDVI: ${stats?.min}
+    - Status: ${stats?.currentStatus}
     
-    Recent data points (last 5 readings): 
-    ${JSON.stringify((data || []).slice(-5))}
+    Individual Region Stats:
+    ${regionsText}
+    
+    Recent data points per region (last 5 readings): 
+    ${JSON.stringify(dataMap || {})}
     
     Write a highly professional analysis of this data in JSON format exactly matching this schema:
     {
@@ -403,11 +413,16 @@ app.post('/api/generate-report', async (req, res) => {
       "recommended_actions": ["action 1", "action 2", ...]
     }
     
-    Make it sound very scientific and authoritative. Output ONLY valid JSON without any markdown code block wrapping.`;
+    Make it sound very scientific and authoritative. Output ONLY valid JSON without any markdown code block wrapping. Do NOT use LaTeX formulas or unescaped backslashes.`;
 
     const result = await model.generateContent(prompt);
     let responseText = result.response.text();
-    responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const match = responseText.match(/\{[\s\S]*\}/);
+    if (match) {
+      responseText = match[0];
+    }
+    // Fix invalid JSON escapes (like \Delta instead of \\Delta) often produced by LLMs
+    responseText = responseText.replace(/\\([^"\\/bfnrtu])/g, '\\\\$1');
 
     try {
       const parsed = JSON.parse(responseText);
@@ -418,6 +433,61 @@ app.post('/api/generate-report', async (req, res) => {
   } catch (error) {
     console.error('Gemini API Error:', error);
     res.status(500).json({ error: 'Failed to generate AI report.' });
+  }
+});
+
+app.post('/api/generate-forecast-report', async (req, res) => {
+  try {
+    const { regionsData } = req.body;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY is not set in backend/.env' });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+
+    let regionsText = '';
+    if (regionsData && Array.isArray(regionsData)) {
+      regionsText = regionsData.map(r => 
+        `- ${r.region}: Current NDVI: ${r.summary?.current_ndvi?.toFixed(3)}, Predicted: ${r.summary?.predicted_ndvi?.toFixed(3)} (${r.prediction?.status}), Avg Rainfall: ${r.summary?.average_rainfall}mm, Avg Temp: ${r.summary?.average_temperature}°C`
+      ).join('\n    ');
+    }
+
+    const prompt = `You are an expert agronomist AI analyzing ML-based crop NDVI forecasts.
+    The user is monitoring the following regions: ${(regionsData || []).map(r => r.region).join(', ')}.
+    
+    Regional Forecast Summaries:
+    ${regionsText}
+    
+    Based on these ML predictions and historical environmental data (Rainfall/Temp), write a highly professional predictive analysis in JSON format exactly matching this schema:
+    {
+      "key_observations": ["observation 1", "observation 2", ...],
+      "predictive_insights": ["insight 1", "insight 2", ...],
+      "recommended_actions": ["action 1", "action 2", ...]
+    }
+    
+    Make it sound very scientific and authoritative. Focus on what the predictions mean for future crop health. Output ONLY valid JSON without any markdown code block wrapping. Do NOT use LaTeX formulas or unescaped backslashes.`;
+
+    const result = await model.generateContent(prompt);
+    let responseText = result.response.text();
+    const match = responseText.match(/\{[\s\S]*\}/);
+    if (match) {
+      responseText = match[0];
+    }
+    // Fix invalid JSON escapes (like \Delta instead of \\Delta) often produced by LLMs
+    responseText = responseText.replace(/\\([^"\\/bfnrtu])/g, '\\\\$1');
+
+    try {
+      const parsed = JSON.parse(responseText);
+      res.json({ report: parsed });
+    } catch (e) {
+      res.json({ report: { key_observations: [responseText], predictive_insights: [], recommended_actions: [] } });
+    }
+  } catch (error) {
+    console.error('Gemini API Error:', error);
+    res.status(500).json({ error: 'Failed to generate AI forecast report.' });
   }
 });
 
@@ -434,5 +504,6 @@ app.listen(PORT, () => {
   - GET http://localhost:${PORT}/api/dashboard-locations
   - GET http://localhost:${PORT}/api/export-dataset
   - POST http://localhost:${PORT}/api/generate-report
+  - POST http://localhost:${PORT}/api/generate-forecast-report
   - npm run check-gee  (credential diagnostic)`);
 });

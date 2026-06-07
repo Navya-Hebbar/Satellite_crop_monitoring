@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import html2canvas from 'html2canvas';
 import { motion } from 'framer-motion';
 import {
   MapPin,
@@ -24,6 +25,7 @@ import RegionNdviSummaryBar from '../components/forecast/RegionNdviSummaryBar';
 import ForecastMediaPanel from '../components/forecast/ForecastMediaPanel';
 
 const API_BASE = 'http://localhost:3001';
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 function SummaryCard({ title, value, sub, icon: Icon, accent }) {
   return (
@@ -54,6 +56,9 @@ export default function ForecastDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [aiReport, setAiReport] = useState(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [printImages, setPrintImages] = useState({ comparison: null });
 
   const { startDate, endDate } = useMemo(
     () => rangeFromPreset(preset, customStart, customEnd),
@@ -111,35 +116,92 @@ export default function ForecastDashboard() {
     fetchDashboard();
   }, [fetchDashboard]);
 
+  const generateAIReport = async (regionsData) => {
+    setIsGeneratingReport(true);
+    setAiReport(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/generate-forecast-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regionsData })
+      });
+      const result = await response.json();
+      if (result.error) {
+        setAiReport(`Error: ${result.error}`);
+      } else {
+        setAiReport(result.report);
+      }
+    } catch (err) {
+      setAiReport('Failed to connect to AI service.');
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  useEffect(() => {
+    if (data && data.regions && data.regions.length > 0) {
+      generateAIReport(data.regions);
+    }
+  }, [data]);
+
   const primaryRegion = data?.regions?.[0];
   const prediction = primaryRegion?.prediction;
   const summary = primaryRegion?.summary;
   const regionForecasts = data?.regions || [];
 
-  const getPrintChartData = useCallback(() => {
-    if (!primaryRegion?.ndvi) return [];
-    const ndviSeries = primaryRegion.ndvi;
-    const lastHist = ndviSeries[ndviSeries.length - 1];
-    const chartData = ndviSeries.map((p) => ({
-      date: p.date,
-      historical: p.value,
-      forecast: null,
-    }));
-
-    if (lastHist && prediction) {
-      chartData.push({
-        date: lastHist.date,
-        historical: lastHist.value,
-        forecast: lastHist.value,
+  const getMultiRegionChartData = useCallback(() => {
+    if (!regionForecasts || regionForecasts.length === 0) return [];
+    
+    let allDates = new Set();
+    regionForecasts.forEach(rf => {
+      if (rf.ndvi) rf.ndvi.forEach(d => allDates.add(d.date));
+      if (rf.prediction) allDates.add(rf.prediction.date);
+    });
+    
+    const sortedDates = Array.from(allDates).sort();
+    
+    const chartData = sortedDates.map(date => {
+      let dataPoint = { date };
+      regionForecasts.forEach((rf) => {
+        const histPoint = rf.ndvi?.find(d => d.date === date);
+        if (histPoint) {
+          dataPoint[`${rf.region}_hist`] = histPoint.value;
+        }
+        if (rf.prediction?.date === date) {
+          dataPoint[`${rf.region}_pred`] = rf.prediction.predicted_ndvi;
+        }
       });
-      chartData.push({
-        date: prediction.date,
-        historical: null,
-        forecast: prediction.predicted_ndvi,
-      });
-    }
+      return dataPoint;
+    });
+    
+    regionForecasts.forEach(rf => {
+      if (rf.ndvi && rf.ndvi.length > 0 && rf.prediction) {
+        const lastHistDate = rf.ndvi[rf.ndvi.length - 1].date;
+        const point = chartData.find(d => d.date === lastHistDate);
+        if (point && point[`${rf.region}_hist`] !== undefined) {
+          point[`${rf.region}_pred`] = point[`${rf.region}_hist`];
+        }
+      }
+    });
+    
     return chartData;
-  }, [primaryRegion, prediction]);
+  }, [regionForecasts]);
+
+  const exportToPDF = async () => {
+    const compNode = document.getElementById('render-comp-chart');
+    if (compNode) {
+      try {
+        const compCanvas = await html2canvas(compNode, { scale: 2, backgroundColor: '#ffffff' });
+        setPrintImages({ comparison: compCanvas.toDataURL('image/png') });
+        setTimeout(() => window.print(), 500);
+      } catch (err) {
+        console.error('Print capture failed', err);
+        window.print();
+      }
+    } else {
+      window.print();
+    }
+  };
 
   const statusColor =
     prediction?.status === 'Improving'
@@ -161,7 +223,7 @@ export default function ForecastDashboard() {
             prediction. Weather variables are observations only — not forecast.
           </p>
         </div>
-        <button onClick={() => window.print()} className="flex items-center space-x-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl text-purple-400 text-sm font-bold transition-all mt-2 print:hidden">
+        <button onClick={exportToPDF} className="flex items-center space-x-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl text-purple-400 text-sm font-bold transition-all mt-2 print:hidden">
           <FileText className="w-4 h-4" />
           <span className="hidden sm:inline">Export PDF</span>
         </button>
@@ -314,21 +376,15 @@ export default function ForecastDashboard() {
           )}
 
           <NdviForecastChart
-            ndviSeries={primaryRegion?.ndvi || []}
-            prediction={primaryRegion?.prediction}
+            regionForecasts={regionForecasts}
             forecastStart={primaryRegion?.forecast_start}
           />
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <NdviHistogram ndviSeries={primaryRegion?.ndvi || []} />
-            <NdviRainfallScatter
-              ndviSeries={primaryRegion?.ndvi || []}
-              rainfallSeries={primaryRegion?.rainfall || []}
-            />
-            <div className="space-y-6">
-              <RainfallChart data={primaryRegion?.rainfall || []} />
-              <TemperatureChart data={primaryRegion?.temperature || []} />
-            </div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <NdviHistogram regionForecasts={regionForecasts} />
+            <NdviRainfallScatter regionForecasts={regionForecasts} />
+            <RainfallChart regionForecasts={regionForecasts} />
+            <TemperatureChart regionForecasts={regionForecasts} />
           </div>
 
           <motion.div
@@ -336,18 +392,38 @@ export default function ForecastDashboard() {
             animate={{ opacity: 1 }}
             className="glass rounded-3xl border border-white/10 p-6 space-y-4"
           >
-            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">
-              Insights
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center justify-between">
+              <span>AI Predictive Insights</span>
+              {isGeneratingReport && <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />}
             </h3>
-            <ul className="space-y-3 text-sm text-slate-300 leading-relaxed">
-              <li>{data.insights?.ndvi_trend}</li>
-              <li>{data.insights?.predicted_movement}</li>
-              <li>{data.insights?.rainfall_note}</li>
-              <li>{data.insights?.temperature_note}</li>
-              <li className="text-emerald-400/90 font-medium">{data.insights?.crop_health}</li>
-            </ul>
-            <p className="text-[10px] text-slate-600 uppercase tracking-widest">
-              Model: {prediction?.model_used || 'RandomForestRegressor'} — predicts NDVI only
+            {isGeneratingReport ? (
+              <p className="text-sm text-slate-400 italic">Generating multi-region predictive analysis...</p>
+            ) : aiReport && typeof aiReport === 'object' ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Key Observations</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-slate-300">
+                    {aiReport.key_observations?.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Predictive Insights</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-emerald-400/90 font-medium">
+                    {aiReport.predictive_insights?.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Recommended Actions</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-amber-300/90">
+                    {aiReport.recommended_actions?.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">{aiReport || 'No AI insights available.'}</p>
+            )}
+            <p className="text-[10px] text-slate-600 uppercase tracking-widest mt-4">
+              Model: {prediction?.model_used || 'RandomForestRegressor'} — Multi-Region Analysis via Gemini
             </p>
           </motion.div>
         </>
@@ -356,6 +432,7 @@ export default function ForecastDashboard() {
 
       {/* --- FORMAL PRINT REPORT VIEW --- */}
       {data && !loading && (
+      <>
       <div className="hidden print:block font-serif text-black bg-white min-h-screen relative pt-8 pb-16 px-4">
         
         {/* Repeating Footer */}
@@ -392,41 +469,60 @@ export default function ForecastDashboard() {
           </div>
         </div>
 
-        {/* Executive Summary */}
+        {/* Executive Summary & AI Report */}
         <div className="mb-12">
-          <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-1 text-black">1. Forecast Summary ({selectedRegions[0]})</h2>
-          <div className="grid grid-cols-4 gap-4 mb-6 font-sans">
-            <div className="border border-gray-200 p-3 bg-gray-50">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Current NDVI</p>
-              <p className="text-lg font-bold text-emerald-700">{summary?.current_ndvi?.toFixed(3) ?? '—'}</p>
-            </div>
-            <div className="border border-gray-200 p-3 bg-gray-50">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Predicted NDVI</p>
-              <p className="text-lg font-bold">{summary?.predicted_ndvi?.toFixed(3) ?? '—'}</p>
-              <p className="text-[10px] uppercase font-bold">{prediction?.date ? `Month ${prediction.date}` : ''}</p>
-            </div>
-            <div className="border border-gray-200 p-3 bg-gray-50">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Predicted Change</p>
-              <p className={`text-lg font-bold ${prediction?.status === 'Improving' ? 'text-emerald-600' : prediction?.status === 'Declining' ? 'text-red-600' : 'text-amber-600'}`}>
-                {summary?.change_percent != null ? `${summary.change_percent > 0 ? '+' : ''}${summary.change_percent}%` : '—'}
-              </p>
-              <p className="text-[10px] uppercase font-bold">{prediction?.status}</p>
-            </div>
-            <div className="border border-gray-200 p-3 bg-gray-50">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Historical Rainfall</p>
-              <p className="text-lg font-bold">{summary?.average_rainfall != null ? `${summary.average_rainfall} mm` : '—'}</p>
-            </div>
+          <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-1 text-black">1. Regional Forecast Comparison</h2>
+          <div className="mb-6 font-sans">
+            <table className="w-full text-left border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100 text-gray-700 text-xs uppercase tracking-wider">
+                  <th className="border border-gray-300 p-3">Region</th>
+                  <th className="border border-gray-300 p-3">Current NDVI</th>
+                  <th className="border border-gray-300 p-3">Predicted NDVI</th>
+                  <th className="border border-gray-300 p-3">Change %</th>
+                  <th className="border border-gray-300 p-3">Avg Rainfall</th>
+                  <th className="border border-gray-300 p-3">Avg Temp</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {regionForecasts.map((rf, idx) => (
+                  <tr key={rf.region} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="border border-gray-300 p-3 font-bold">{rf.region}</td>
+                    <td className="border border-gray-300 p-3">{rf.summary?.current_ndvi?.toFixed(3) ?? '—'}</td>
+                    <td className="border border-gray-300 p-3 font-bold text-indigo-900">{rf.summary?.predicted_ndvi?.toFixed(3) ?? '—'}</td>
+                    <td className={`border border-gray-300 p-3 font-bold ${rf.prediction?.status === 'Improving' ? 'text-emerald-600' : rf.prediction?.status === 'Declining' ? 'text-red-600' : 'text-amber-600'}`}>
+                      {rf.summary?.change_percent != null ? `${rf.summary.change_percent > 0 ? '+' : ''}${rf.summary.change_percent}%` : '—'}
+                    </td>
+                    <td className="border border-gray-300 p-3">{rf.summary?.average_rainfall != null ? `${rf.summary.average_rainfall} mm` : '—'}</td>
+                    <td className="border border-gray-300 p-3">{rf.summary?.average_temperature != null ? `${rf.summary.average_temperature} °C` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           
-          <div className="border border-gray-300 p-5 bg-blue-50/30 text-sm font-sans leading-relaxed">
-            <h3 className="font-bold text-indigo-900 mb-2 border-b border-indigo-100 pb-2">AI Predictive Insights</h3>
-            <ul className="list-disc pl-5 space-y-1 text-gray-800">
-              <li>{data?.regions[0]?.insights?.ndvi_trend}</li>
-              <li>{data?.regions[0]?.insights?.predicted_movement}</li>
-              <li>{data?.regions[0]?.insights?.rainfall_note}</li>
-              <li>{data?.regions[0]?.insights?.temperature_note}</li>
-              <li className="font-medium text-emerald-800 mt-2">{data?.regions[0]?.insights?.crop_health}</li>
-            </ul>
+          <div className="border border-gray-300 p-5 bg-blue-50/30 text-sm font-sans leading-relaxed break-inside-avoid">
+            <h3 className="font-bold text-indigo-900 mb-2 border-b border-indigo-100 pb-2">AI Predictive Insights (Multi-Region)</h3>
+            {isGeneratingReport ? (
+              <p className="italic text-gray-500">Generating AI report...</p>
+            ) : aiReport && typeof aiReport === 'object' ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Key Observations:</p>
+                  <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-800">{aiReport.key_observations?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                </div>
+                <div>
+                  <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Predictive Insights:</p>
+                  <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-800">{aiReport.predictive_insights?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                </div>
+                <div>
+                  <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Recommended Actions:</p>
+                  <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-800">{aiReport.recommended_actions?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                </div>
+              </div>
+            ) : (
+              <p className="italic text-gray-500">No AI insights generated yet. View dashboard UI first.</p>
+            )}
           </div>
         </div>
 
@@ -434,20 +530,69 @@ export default function ForecastDashboard() {
         <div className="mb-12 break-inside-avoid">
            <h2 className="text-xl font-bold mb-6 border-b border-gray-300 pb-1 text-black">2. Machine Learning NDVI Projection</h2>
            <div className="mx-auto" style={{ width: '750px', height: '350px' }}>
-             <LineChart data={getPrintChartData()} width={750} height={350} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
-               <XAxis dataKey="date" stroke="#000" fontSize={11} />
-               <YAxis stroke="#000" fontSize={11} domain={[-0.1, 1]} />
-               <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
-               {primaryRegion?.forecast_start && (
-                 <ReferenceLine x={primaryRegion.forecast_start} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Forecast Start', fill: '#000', fontSize: 11 }} />
-               )}
-               <Line type="monotone" dataKey="historical" name="Historical NDVI" stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
-               <Line type="monotone" dataKey="forecast" name="Predicted NDVI" stroke="#34d399" strokeWidth={2} strokeDasharray="8 6" dot={{ r: 4, fill: '#34d399' }} connectNulls isAnimationActive={false} />
-             </LineChart>
+             {printImages.comparison ? (
+               <img src={printImages.comparison} alt="Projection Chart" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+             ) : (
+               <LineChart data={getMultiRegionChartData()} width={750} height={350} margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
+                 <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
+                 <XAxis dataKey="date" stroke="#000" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+                 <YAxis stroke="#000" fontSize={11} domain={[0.2, 1]} tickFormatter={(val) => Number(val).toFixed(2)} width={35} />
+                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
+                 {primaryRegion?.forecast_start && (
+                   <ReferenceLine x={primaryRegion.forecast_start} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Forecast Start', fill: '#000', fontSize: 11 }} />
+                 )}
+                 {selectedRegions.map((region, idx) => (
+                   <Line key={`${region}-hist`} type="monotone" dataKey={`${region}_hist`} name={`${region} (Historical)`} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
+                 ))}
+                 {selectedRegions.map((region, idx) => (
+                   <Line key={`${region}-pred`} type="monotone" dataKey={`${region}_pred`} name={`${region} (Predicted)`} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} strokeDasharray="8 6" dot={{ r: 4, fill: COLORS[idx % COLORS.length] }} connectNulls isAnimationActive={false} />
+                 ))}
+               </LineChart>
+             )}
+           </div>
+        </div>
+
+        {/* Supplementary Data Visualizations */}
+        <div className="mb-12 break-inside-avoid">
+           <h2 className="text-xl font-bold mb-6 border-b border-gray-300 pb-1 text-black">3. Environmental & Distribution Analysis</h2>
+           <div className="grid grid-cols-2 gap-6">
+             <div className="bg-slate-900 rounded-2xl p-2 print:bg-slate-900 print:text-white" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+               <NdviHistogram regionForecasts={regionForecasts} printWidth={320} printHeight={220} />
+             </div>
+             <div className="bg-slate-900 rounded-2xl p-2 print:bg-slate-900 print:text-white" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+               <NdviRainfallScatter regionForecasts={regionForecasts} printWidth={320} printHeight={220} />
+             </div>
+             <div className="bg-slate-900 rounded-2xl p-2 print:bg-slate-900 print:text-white" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+               <RainfallChart regionForecasts={regionForecasts} printWidth={320} printHeight={220} />
+             </div>
+             <div className="bg-slate-900 rounded-2xl p-2 print:bg-slate-900 print:text-white" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+               <TemperatureChart regionForecasts={regionForecasts} printWidth={320} printHeight={220} />
+             </div>
            </div>
         </div>
       </div>
+
+      {/* Off-screen Render Targets for Image Capture */}
+      <div className="fixed top-0 left-[-9999px] opacity-0 pointer-events-none bg-white">
+        <div id="render-comp-chart" style={{ width: '750px', height: '350px', padding: '10px' }}>
+          <LineChart data={getMultiRegionChartData()} width={750} height={350} margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
+             <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
+             <XAxis dataKey="date" stroke="#000" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+             <YAxis stroke="#000" fontSize={11} domain={[0.2, 1]} tickFormatter={(val) => Number(val).toFixed(2)} width={35} />
+             <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
+             {primaryRegion?.forecast_start && (
+               <ReferenceLine x={primaryRegion.forecast_start} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Forecast Start', fill: '#000', fontSize: 11 }} />
+             )}
+             {selectedRegions.map((region, idx) => (
+               <Line key={`render-${region}-hist`} type="monotone" dataKey={`${region}_hist`} name={`${region} (Historical)`} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
+             ))}
+             {selectedRegions.map((region, idx) => (
+               <Line key={`render-${region}-pred`} type="monotone" dataKey={`${region}_pred`} name={`${region} (Predicted)`} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} strokeDasharray="8 6" dot={{ r: 4, fill: COLORS[idx % COLORS.length] }} connectNulls isAnimationActive={false} />
+             ))}
+           </LineChart>
+        </div>
+      </div>
+      </>
       )}
     </>
   );

@@ -1,6 +1,6 @@
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -31,11 +31,12 @@ export default function RegionNdviComparisonChart({ regionForecasts }) {
         Region NDVI Comparison
       </h3>
       <ResponsiveContainer width="100%" height="85%">
-        <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.35} />
+        <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.35} vertical={false} />
           <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} interval="preserveStartEnd" />
-          <YAxis domain={[-0.1, 1]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+          <YAxis domain={[0, 1]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
           <Tooltip
+            cursor={{ fill: '#334155', opacity: 0.2 }}
             contentStyle={{
               background: '#0f172a',
               border: '1px solid #334155',
@@ -44,18 +45,15 @@ export default function RegionNdviComparisonChart({ regionForecasts }) {
           />
           <Legend wrapperStyle={{ color: '#cbd5e1' }} />
           {regionForecasts.map((region, idx) => (
-            <Line
+            <Bar
               key={region.region}
-              type="monotone"
               dataKey={region.region}
               name={region.region}
-              stroke={COLORS[idx % COLORS.length]}
-              strokeWidth={2.5}
-              dot={false}
-              connectNulls
+              fill={COLORS[idx % COLORS.length]}
+              radius={[2, 2, 0, 0]}
             />
           ))}
-        </LineChart>
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );

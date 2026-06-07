@@ -10,15 +10,20 @@ export const DataProvider = ({ children }) => {
     avg: 0, max: 0, min: 0, currentStatus: 'N/A',
     classification: { Healthy: 0, Moderate: 0, Unhealthy: 0 }
   });
+  const [allRegionsStats, setAllRegionsStats] = useState({});
   const [seasonalTrends, setSeasonalTrends] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [showYoY, setShowYoY] = useState(false);
   const [yoyDataMap, setYoyDataMap] = useState({});
 
+  const today = new Date();
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+
   // Mission Settings
-  const [startDate, setStartDate] = useState('2023-01-01');
-  const [endDate, setEndDate] = useState('2024-01-01');
+  const [startDate, setStartDate] = useState(oneYearAgo.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
   const [bufferSize, setBufferSize] = useState(1000);
 
   const [regionDatabase, setRegionDatabase] = useState({
@@ -68,18 +73,24 @@ export const DataProvider = ({ children }) => {
   };
 
   const updateStats = (regionData) => {
-    if (!regionData || regionData.length === 0) return;
+    if (!regionData || regionData.length === 0) return null;
     const ndvis = regionData.map(d => d.ndvi);
     const avg = ndvis.reduce((a, b) => a + b, 0) / ndvis.length;
+    const maxVal = Math.max(...ndvis);
+    const minVal = Math.min(...ndvis);
 
-    setStats({
+    const maxEntry = regionData.find(d => d.ndvi === maxVal);
+    const minEntry = regionData.find(d => d.ndvi === minVal);
+
+    return {
       avg: avg.toFixed(2),
-      max: Math.max(...ndvis).toFixed(2),
-      min: Math.min(...ndvis).toFixed(2),
+      max: maxVal.toFixed(2),
+      min: minVal.toFixed(2),
+      maxDate: maxEntry ? maxEntry.date : 'N/A',
+      minDate: minEntry ? minEntry.date : 'N/A',
       currentStatus: classifyNDVI(avg),
       classification: calculateClassificationPercentages(regionData)
-    });
-    setSeasonalTrends(calculateSeasonalTrends(regionData));
+    };
   };
 
   const calculateClassificationPercentages = (formattedData) => {
@@ -144,8 +155,26 @@ export const DataProvider = ({ children }) => {
   }, [showYoY, selectedRegions, startDate, endDate, bufferSize]);
 
   useEffect(() => {
-    if (selectedRegions.length > 0 && data[selectedRegions[0]]) {
-      updateStats(data[selectedRegions[0]]);
+    if (selectedRegions.length > 0) {
+      const newAllStats = {};
+      let aggregatedData = [];
+
+      selectedRegions.forEach(region => {
+        if (data[region]) {
+           newAllStats[region] = updateStats(data[region]);
+           aggregatedData = aggregatedData.concat(data[region]);
+        }
+      });
+      
+      setAllRegionsStats(newAllStats);
+
+      if (aggregatedData.length > 0) {
+        const aggregateStats = updateStats(aggregatedData);
+        if (aggregateStats) {
+          setStats(aggregateStats);
+          setSeasonalTrends(calculateSeasonalTrends(aggregatedData));
+        }
+      }
     }
   }, [selectedRegions, data]);
 
@@ -154,6 +183,7 @@ export const DataProvider = ({ children }) => {
       data: data[selectedRegions[0]] || [],
       allRegionsData: data,
       stats,
+      allRegionsStats,
       selectedRegions,
       setSelectedRegions,
       allCities,

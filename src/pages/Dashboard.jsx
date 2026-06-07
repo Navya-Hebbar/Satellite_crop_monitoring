@@ -2,9 +2,9 @@ import { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, Legend, ComposedChart, Bar, ScatterChart, Scatter, ZAxis
+  AreaChart, Area, Legend, ComposedChart, BarChart, Bar, ScatterChart, Scatter, ZAxis
 } from 'recharts';
-import { FileText, Map, ShieldAlert, Cpu, Activity, Download, Layers, Calendar, CheckCircle2 } from 'lucide-react';
+import { FileText, Map, ShieldAlert, Cpu, Activity, Download, Layers, Calendar, CheckCircle2, MapPin, X, Trash2, Plus, Monitor, Shield, TrendingUp, AlertTriangle, History, ArrowUpRight, TrendingDown } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 
@@ -59,6 +59,7 @@ const Dashboard = () => {
     data = [],
     allRegionsData = {},
     stats = { avg: 0, max: 0, min: 0, currentStatus: 'N/A' },
+    allRegionsStats = {},
     selectedRegions = ['Bangalore'],
     setSelectedRegions,
     allCities = [],
@@ -84,7 +85,7 @@ const Dashboard = () => {
 
   const [aiReport, setAiReport] = useState(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [printImages, setPrintImages] = useState({ comparison: null, env: null });
+  const [printImages, setPrintImages] = useState({ comparison: null, barChart: null });
 
   const generateAIReport = async () => {
     setIsGeneratingReport(true);
@@ -94,8 +95,9 @@ const Dashboard = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stats,
+          allRegionsStats,
           selectedRegions,
-          data: allRegionsData[selectedRegions[0]] || []
+          dataMap: selectedRegions.reduce((acc, r) => ({ ...acc, [r]: (allRegionsData[r] || []).slice(-5) }), {})
         })
       });
       const result = await response.json();
@@ -135,16 +137,16 @@ const Dashboard = () => {
 
   const exportToPDF = async () => {
     const compNode = document.getElementById('render-comp-chart');
-    const envNode = document.getElementById('render-env-chart');
+    const barNode = document.getElementById('render-bar-chart');
     
-    if (compNode && envNode) {
+    if (compNode) {
       try {
         const compCanvas = await html2canvas(compNode, { scale: 2, backgroundColor: '#ffffff' });
-        const envCanvas = await html2canvas(envNode, { scale: 2, backgroundColor: '#ffffff' });
+        const barCanvas = barNode ? await html2canvas(barNode, { scale: 2, backgroundColor: '#ffffff' }) : null;
         
         setPrintImages({
           comparison: compCanvas.toDataURL('image/png'),
-          env: envCanvas.toDataURL('image/png')
+          barChart: barCanvas ? barCanvas.toDataURL('image/png') : null
         });
         
         setTimeout(() => {
@@ -482,25 +484,96 @@ const Dashboard = () => {
         <KPICard
           title="Peak NDVI"
           value={stats.max}
-          subValue="Highest Point"
+          subValue={stats.maxDate ? `On ${stats.maxDate}` : 'Highest Point'}
           icon={TrendingUp}
           color="text-blue-400"
         />
         <KPICard
           title="Min Index"
           value={stats.min}
-          subValue="Stress Point"
+          subValue={stats.minDate ? `On ${stats.minDate}` : 'Stress Point'}
           icon={AlertTriangle}
           color="text-red-400"
         />
         <KPICard
           title="Active Sectors"
           value={selectedRegions.length}
-          subValue="GEE Sync: Live"
+          subValue={loading ? "Syncing..." : "GEE Sync: Live"}
           icon={Shield}
           color="text-indigo-400"
         />
       </div>
+
+      {/* Regional Comparison Table */}
+      {selectedRegions.length > 1 && (
+        <div className="glass p-8 rounded-[2.5rem] border border-white/10 overflow-hidden mt-8">
+          <h3 className="text-lg font-bold text-white mb-6 flex items-center uppercase tracking-tighter">
+            <Layers className="w-5 h-5 mr-2 text-blue-400" />
+            Regional Comparison
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Table (Left) */}
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left">
+                <thead className="text-[10px] text-slate-500 uppercase tracking-[0.2em] border-b border-white/10">
+                  <tr>
+                    <th className="px-4 py-4">Region</th>
+                    <th className="px-4 py-4 text-center">Avg Health</th>
+                    <th className="px-4 py-4 text-center">Status</th>
+                    <th className="px-4 py-4 text-center">Peak NDVI</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 font-mono text-sm">
+                  {selectedRegions.map(region => {
+                    const rStats = allRegionsStats[region];
+                    if (!rStats) return null;
+                    return (
+                      <tr key={region} className="hover:bg-white/5 transition-colors">
+                        <td className="px-4 py-4 font-sans font-bold text-white">{region}</td>
+                        <td className="px-4 py-4 text-center text-emerald-400 font-bold">{rStats.avg}</td>
+                        <td className="px-4 py-4 text-center">
+                          <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase border ${
+                              rStats.currentStatus === 'Healthy' ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/10' :
+                              rStats.currentStatus === 'Moderate' ? 'border-yellow-500/20 text-yellow-400 bg-yellow-500/10' :
+                              'border-red-500/20 text-red-400 bg-red-500/10'
+                            }`}>
+                            {rStats.currentStatus}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center text-blue-400 font-bold">{rStats.max}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bar Chart (Right) */}
+            <div className="h-[250px] w-full bg-white/5 rounded-2xl p-4 border border-white/5 relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={selectedRegions.map(r => ({
+                  name: r,
+                  Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
+                  Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
+                }))} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748b" fontSize={11} domain={[0, 1]} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{ fill: '#ffffff0a' }}
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                    itemStyle={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 'bold' }}
+                    labelStyle={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', marginBottom: '4px' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
+                  <Bar dataKey="Average" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="Peak" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Trend Benchmarking */}
@@ -766,145 +839,171 @@ const Dashboard = () => {
     </div>
 
       {/* --- FORMAL PRINT REPORT VIEW --- */}
-      <div className="hidden print:block font-serif text-black bg-white min-h-screen relative pt-8 pb-16 px-4">
+      <div className="hidden print:block font-sans text-gray-900 bg-white min-h-screen p-8 relative">
         
         {/* Repeating Footer */}
-        <div className="fixed bottom-0 left-0 right-0 flex justify-between text-[10px] text-gray-400 border-t border-gray-200 pt-3 pb-4 bg-white font-sans">
-          <span className="font-semibold">SatCrop Intelligence Platform</span>
+        <div className="fixed bottom-4 left-8 right-8 flex justify-between text-xs text-gray-500 border-t border-gray-300 pt-3 bg-white z-50">
+          <span className="font-bold">SatCrop Intelligence Platform</span>
           <span>Generated: {new Date().toLocaleDateString()}</span>
         </div>
 
         {/* Report Header */}
-        <div className="border-b-2 border-black pb-6 mb-8 text-center">
-          <h1 className="text-3xl font-bold uppercase tracking-widest text-black">SatCrop Analytical Report</h1>
-          <p className="mt-2 text-gray-600 font-sans text-sm">Automated Crop Health & Environmental Synthesis</p>
+        <div className="border-b-4 border-gray-800 pb-6 mb-8 text-center bg-gray-50 p-8 rounded-sm">
+          <h1 className="text-4xl font-black uppercase tracking-widest text-gray-900">SatCrop Analytical Report</h1>
+          <p className="mt-2 text-gray-600 font-medium text-sm">Automated Crop Health & Environmental Synthesis</p>
         </div>
 
         {/* Mission Parameters */}
-        <div className="mb-10 font-sans">
-          <div className="grid grid-cols-2 gap-4 border border-gray-300 p-4">
-            <div>
-              <p className="text-xs text-gray-500 uppercase font-bold">Analysis Period</p>
-              <p className="text-sm font-semibold">{startDate} to {endDate}</p>
+        <div className="mb-10 break-inside-avoid">
+          <h2 className="text-lg font-bold mb-3 text-gray-800 uppercase tracking-wider border-b-2 border-gray-200 pb-1">Report Parameters</h2>
+          <div className="grid grid-cols-2 gap-0 border-2 border-gray-800 rounded-sm overflow-hidden">
+            <div className="p-4 border-b border-r border-gray-800 bg-gray-50">
+              <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider">Analysis Period</p>
+              <p className="text-sm font-bold text-gray-900">{startDate} to {endDate}</p>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 uppercase font-bold">Target Regions</p>
-              <p className="text-sm font-semibold">{selectedRegions.join(', ')}</p>
+            <div className="p-4 border-b border-gray-800 bg-gray-50">
+              <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider">Target Regions</p>
+              <p className="text-sm font-bold text-gray-900">{selectedRegions.join(', ')}</p>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 uppercase font-bold">Scan Resolution</p>
-              <p className="text-sm font-semibold">{bufferSize}m Buffer</p>
+            <div className="p-4 border-r border-gray-800 bg-gray-50">
+              <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider">Scan Resolution</p>
+              <p className="text-sm font-bold text-gray-900">{bufferSize}m Buffer</p>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 uppercase font-bold">Mission Status</p>
-              <p className="text-sm font-semibold text-emerald-700">{selectedRegions.length > 1 ? 'Multi-Sector Benchmark' : 'Single Grid Recon'}</p>
+            <div className="p-4 bg-gray-50">
+              <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider">Mission Status</p>
+              <p className="text-sm font-bold text-emerald-700">{selectedRegions.length > 1 ? 'Multi-Sector Benchmark' : 'Single Grid Recon'}</p>
             </div>
           </div>
         </div>
 
         {/* Executive Summary */}
-        <div className="mb-12">
-          <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-1 text-black">1. Executive Summary</h2>
-          <div className="grid grid-cols-4 gap-4 mb-6 font-sans">
-            <div className="border border-gray-200 p-3 bg-gray-50">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Average Health</p>
-              <p className="text-lg font-bold text-emerald-700">{stats.avg}</p>
-              <p className="text-[10px] uppercase font-bold text-emerald-600">{stats.currentStatus}</p>
-            </div>
-            <div className="border border-gray-200 p-3 bg-gray-50">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Peak NDVI</p>
-              <p className="text-lg font-bold">{stats.max}</p>
-            </div>
-            <div className="border border-gray-200 p-3 bg-gray-50">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Min Index</p>
-              <p className="text-lg font-bold text-red-600">{stats.min}</p>
-            </div>
-            <div className="border border-gray-200 p-3 bg-gray-50">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Active Sectors</p>
-              <p className="text-lg font-bold">{selectedRegions.length}</p>
+        <div className="mb-10 break-inside-avoid">
+          <h2 className="text-lg font-bold mb-3 text-gray-800 uppercase tracking-wider border-b-2 border-gray-200 pb-1">1. Regional Comparison</h2>
+          <div className="mb-6">
+            <table className="w-full text-left border-collapse border-2 border-gray-800">
+              <thead className="bg-gray-100 text-[10px] text-gray-700 uppercase tracking-wider">
+                <tr>
+                  <th className="p-3 border-b-2 border-gray-800 border-r border-gray-800">Region</th>
+                  <th className="p-3 border-b-2 border-gray-800 border-r border-gray-800 text-center">Avg Health</th>
+                  <th className="p-3 border-b-2 border-gray-800 border-r border-gray-800 text-center">Status</th>
+                  <th className="p-3 border-b-2 border-gray-800 border-r border-gray-800 text-center">Peak NDVI</th>
+                  <th className="p-3 border-b-2 border-gray-800 text-center">Min Index</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm text-gray-800">
+                {selectedRegions.map((region, idx) => {
+                  const rStats = allRegionsStats[region];
+                  if (!rStats) return null;
+                  return (
+                    <tr key={region} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      <td className="p-3 border-b border-gray-300 border-r border-gray-800 font-bold">{region}</td>
+                      <td className="p-3 border-b border-gray-300 border-r border-gray-800 text-center font-bold text-emerald-700">{rStats.avg}</td>
+                      <td className="p-3 border-b border-gray-300 border-r border-gray-800 text-center font-bold" 
+                          style={{ color: rStats.currentStatus === 'Healthy' ? '#047857' : rStats.currentStatus === 'Moderate' ? '#b45309' : '#b91c1c' }}>
+                        {rStats.currentStatus}
+                      </td>
+                      <td className="p-3 border-b border-gray-300 border-r border-gray-800 text-center text-blue-700 font-bold">{rStats.max} <span className="block text-[10px] text-gray-500 font-normal">({rStats.maxDate})</span></td>
+                      <td className="p-3 border-b border-gray-300 text-center text-red-700 font-bold">{rStats.min} <span className="block text-[10px] text-gray-500 font-normal">({rStats.minDate})</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mb-6 break-inside-avoid border-2 border-gray-800 rounded-sm p-4 bg-white mx-auto flex justify-center" style={{ width: '100%', height: '320px' }}>
+            {printImages.barChart ? (
+              <img src={printImages.barChart} alt="Regional Comparison Bar Chart" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : (
+              <BarChart data={selectedRegions.map(r => ({
+                  name: r,
+                  Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
+                  Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
+                }))} width={650} height={300} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="name" stroke="#374151" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#374151" fontSize={11} domain={[0, 1]} tickLine={false} axisLine={false} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#374151', fontWeight: 'bold' }} />
+                <Bar dataKey="Average" fill="#047857" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+                <Bar dataKey="Peak" fill="#1d4ed8" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+              </BarChart>
+            )}
+          </div>
+
+          <div className="border-2 border-indigo-900 rounded-sm p-6 bg-indigo-50/50 leading-relaxed mt-8 avoid-break">
+            <h3 className="font-black text-indigo-900 mb-3 uppercase tracking-wider flex items-center">
+                AI Diagnostic Insights
+              </h3>
+              <div className="whitespace-pre-wrap text-sm text-gray-800">
+                {aiReport ? (
+                  typeof aiReport === 'object' ? (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Key Observations:</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.key_observations?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                      </div>
+                      <div>
+                        <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Possible Causes:</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.possible_causes?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                      </div>
+                      <div>
+                        <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Recommended Actions:</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.recommended_actions?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                      </div>
+                    </div>
+                  ) : aiReport
+                ) : <span className="italic text-gray-500">No AI insights generated. Click 'Generate AI Report' on the dashboard prior to export.</span>}
+              </div>
             </div>
           </div>
-          <div className="border border-gray-300 p-5 bg-blue-50/30 text-sm font-sans leading-relaxed">
-            <h3 className="font-bold text-indigo-900 mb-2 border-b border-indigo-100 pb-2">AI Diagnostic Insights</h3>
-            <div className="whitespace-pre-wrap text-gray-800">
-              {aiReport ? (
-                typeof aiReport === 'object' ? (
-                  <>
-                    <p className="font-bold mb-1 mt-2">Key Observations:</p>
-                    <ul className="list-disc pl-5 mb-3">{aiReport.key_observations?.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                    <p className="font-bold mb-1">Possible Causes:</p>
-                    <ul className="list-disc pl-5 mb-3">{aiReport.possible_causes?.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                    <p className="font-bold mb-1">Recommended Actions:</p>
-                    <ul className="list-disc pl-5">{aiReport.recommended_actions?.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                  </>
-                ) : aiReport
-              ) : "No AI insights generated. Click 'Generate AI Report' on the dashboard prior to export."}
-            </div>
+
+          {/* Charts Section */}
+          <div className="mb-8 break-inside-avoid">
+             <h2 className="text-lg font-bold mb-4 text-gray-800 uppercase tracking-wider border-b-2 border-gray-200 pb-1">2. Temporal NDVI Analysis</h2>
+             <div className="border-2 border-gray-800 rounded-sm p-4 bg-white mx-auto flex justify-center" style={{ width: '100%', height: '320px' }}>
+               {printImages.comparison ? (
+                 <img src={printImages.comparison} alt="Temporal Analysis Chart" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+               ) : (
+                 <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
+                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                   <XAxis dataKey="date" stroke="#374151" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+                   <YAxis stroke="#374151" fontSize={11} domain={[0.2, 1]} tickFormatter={(val) => Number(val).toFixed(2)} width={35} />
+                   <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
+                   {selectedRegions.map((region, idx) => (
+                     <Line key={region} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={3} dot={false} connectNulls isAnimationActive={false} />
+                   ))}
+                 </LineChart>
+               )}
+             </div>
           </div>
-        </div>
 
-        {/* Charts Section */}
-        <div className="mb-12 break-inside-avoid">
-           <h2 className="text-xl font-bold mb-6 border-b border-gray-300 pb-1 text-black">2. Temporal NDVI Analysis</h2>
-           <div className="mx-auto flex justify-center" style={{ width: '100%', height: '300px' }}>
-             {printImages.comparison ? (
-               <img src={printImages.comparison} alt="Temporal Analysis Chart" style={{ width: '650px', height: '300px', objectFit: 'contain' }} />
-             ) : (
-               <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                 <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
-                 <XAxis dataKey="date" stroke="#000" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
-                 <YAxis stroke="#000" fontSize={11} domain={[0.2, 1]} />
-                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
-                 {selectedRegions.map((region, idx) => (
-                   <Line key={region} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
-                 ))}
-               </LineChart>
-             )}
-           </div>
-        </div>
-
-        <div className="mb-12 break-inside-avoid">
-           <h2 className="text-xl font-bold mb-6 border-b border-gray-300 pb-1 text-black">3. Environmental Overlay ({selectedRegions[0]})</h2>
-           <div className="mx-auto flex justify-center" style={{ width: '100%', height: '300px' }}>
-             {printImages.env ? (
-               <img src={printImages.env} alt="Environmental Overlay Chart" style={{ width: '650px', height: '300px', objectFit: 'contain' }} />
-             ) : (
-               <ComposedChart data={envData} width={650} height={300} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                 <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
-                 <XAxis dataKey="date" stroke="#000" fontSize={11} />
-                 <YAxis yAxisId="left" stroke="#3b82f6" fontSize={11} width={40} />
-                 <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={11} width={40} />
-                 <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
-                 <Bar yAxisId="left" dataKey="rainfall" name="Rainfall (mm)" fill="#3b82f6" fillOpacity={0.6} isAnimationActive={false} />
-                 <Line yAxisId="right" type="monotone" dataKey="temperature" name="Temperature (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} isAnimationActive={false} />
-               </ComposedChart>
-             )}
-           </div>
-        </div>
 
         {/* Off-screen Render Targets for Image Capture */}
         <div className="fixed top-0 left-[-9999px] opacity-0 pointer-events-none bg-white">
           <div id="render-comp-chart" style={{ width: '650px', height: '300px', padding: '10px' }}>
-            <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
-               <XAxis dataKey="date" stroke="#000" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
-               <YAxis stroke="#000" fontSize={11} domain={[0.2, 1]} />
-               <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
+            <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
+               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+               <XAxis dataKey="date" stroke="#374151" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+               <YAxis stroke="#374151" fontSize={11} domain={[0.2, 1]} tickFormatter={(val) => Number(val).toFixed(2)} width={35} />
+               <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold' }} />
                {selectedRegions.map((region, idx) => (
-                 <Line key={`render-${region}`} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
+                 <Line key={`render-${region}`} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={3} dot={false} connectNulls isAnimationActive={false} />
                ))}
              </LineChart>
           </div>
-          <div id="render-env-chart" style={{ width: '650px', height: '300px', padding: '10px' }}>
-             <ComposedChart data={envData} width={650} height={300} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={false} />
-               <XAxis dataKey="date" stroke="#000" fontSize={11} />
-               <YAxis yAxisId="left" stroke="#3b82f6" fontSize={11} width={40} />
-               <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={11} width={40} />
-               <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
-               <Bar yAxisId="left" dataKey="rainfall" name="Rainfall (mm)" fill="#3b82f6" fillOpacity={0.6} isAnimationActive={false} />
-               <Line yAxisId="right" type="monotone" dataKey="temperature" name="Temperature (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} isAnimationActive={false} />
-             </ComposedChart>
+          <div id="render-bar-chart" style={{ width: '650px', height: '300px', padding: '10px' }}>
+            <BarChart data={selectedRegions.map(r => ({
+                name: r,
+                Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
+                Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
+              }))} width={650} height={300} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis dataKey="name" stroke="#374151" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#374151" fontSize={11} domain={[0, 1]} tickLine={false} axisLine={false} />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#374151', fontWeight: 'bold' }} />
+              <Bar dataKey="Average" fill="#047857" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+              <Bar dataKey="Peak" fill="#1d4ed8" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+            </BarChart>
           </div>
         </div>
 
