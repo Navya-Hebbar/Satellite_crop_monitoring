@@ -45,5 +45,5 @@ export async function fetchNdviTimeSeries({ area, start, end }) {
             ? 'Moderate'
             : 'Unhealthy',
     }))
-    .filter((f) => f.ndvi !== null);
+    .filter((f) => f.ndvi != null && !Number.isNaN(f.ndvi));
 }

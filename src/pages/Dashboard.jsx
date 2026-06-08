@@ -816,18 +816,25 @@ const Dashboard = () => {
               {Array.isArray(logData) && logData.map((row, idx) => (
                 <tr key={idx} className="hover:bg-white/5 transition-colors">
                   <td className="px-8 py-4 text-slate-400">{row.date}</td>
-                  <td className="px-8 py-4 text-white font-bold matrix-text">{row.ndvi.toFixed(4)}</td>
+                  <td className="px-8 py-4 text-white font-bold matrix-text">
+                    {row.ndvi != null ? row.ndvi.toFixed(4) : 'N/A'}
+                  </td>
                   <td className="px-8 py-4">
                     <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${
-                        row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' :
-                        row.ndvi >= 0.3 ? 'border-yellow-500/20 text-yellow-400' :
-                        'border-red-500/20 text-red-400'
+                        row.ndvi != null && row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' :
+                        row.ndvi != null && row.ndvi >= 0.3 ? 'border-yellow-500/20 text-yellow-400' :
+                        row.ndvi == null ? 'border-white/10 text-slate-400 bg-white/5' :
+                        'border-red-500/20 text-red-400 bg-red-500/10'
                       }`}>
-                      {row.ndvi > 0.6 ? 'Healthy' : row.ndvi >= 0.3 ? 'Moderate' : 'Stress'}
+                      {row.ndvi != null ? (row.ndvi > 0.6 ? 'Healthy' : row.ndvi >= 0.3 ? 'Moderate' : 'Stress') : 'N/A'}
                     </span>
                   </td>
                   <td className="px-8 py-4 text-right">
-                    {idx > 0 && logData[idx - 1].ndvi < row.ndvi ? <ArrowUpRight className="inline w-4 h-4 text-emerald-400" /> : <TrendingDown className="inline w-4 h-4 text-red-500/30" />}
+                    {idx > 0 && logData[idx - 1].ndvi != null && row.ndvi != null && logData[idx - 1].ndvi < row.ndvi ? (
+                      <ArrowUpRight className="inline w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <TrendingDown className="inline w-4 h-4 text-red-500/30" />
+                    )}
                   </td>
                 </tr>
               ))}

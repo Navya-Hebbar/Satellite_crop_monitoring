@@ -74,7 +74,16 @@ export const DataProvider = ({ children }) => {
 
   const updateStats = (regionData) => {
     if (!regionData || regionData.length === 0) return null;
-    const ndvis = regionData.map(d => d.ndvi);
+    const ndvis = regionData.map(d => d.ndvi).filter(v => v != null && !isNaN(v));
+    if (ndvis.length === 0) return {
+      avg: '0.00',
+      max: '0.00',
+      min: '0.00',
+      maxDate: 'N/A',
+      minDate: 'N/A',
+      currentStatus: 'N/A',
+      classification: { Healthy: 0, Moderate: 0, Unhealthy: 0 }
+    };
     const avg = ndvis.reduce((a, b) => a + b, 0) / ndvis.length;
     const maxVal = Math.max(...ndvis);
     const minVal = Math.min(...ndvis);
@@ -96,8 +105,9 @@ export const DataProvider = ({ children }) => {
   const calculateClassificationPercentages = (formattedData) => {
     if (!formattedData || formattedData.length === 0) return { Healthy: 0, Moderate: 0, Unhealthy: 0 };
     const counts = { Healthy: 0, Moderate: 0, Unhealthy: 0 };
-    formattedData.forEach(row => counts[row.status]++);
-    const total = formattedData.length;
+    const validData = formattedData.filter(d => d.status && counts[d.status] !== undefined);
+    validData.forEach(row => counts[row.status]++);
+    const total = validData.length || 1;
     return {
       Healthy: Math.round((counts.Healthy / total) * 100),
       Moderate: Math.round((counts.Moderate / total) * 100),
@@ -108,13 +118,15 @@ export const DataProvider = ({ children }) => {
   const calculateSeasonalTrends = (formattedData) => {
     const months = {};
     formattedData.forEach(row => {
-      const month = new Date(row.date).toLocaleString('default', { month: 'short' });
-      if (!months[month]) months[month] = [];
-      months[month].push(row.ndvi);
+      if (row.ndvi != null && !isNaN(row.ndvi)) {
+        const month = new Date(row.date).toLocaleString('default', { month: 'short' });
+        if (!months[month]) months[month] = [];
+        months[month].push(row.ndvi);
+      }
     });
     return Object.entries(months).map(([month, values]) => ({
       month,
-      avg: values.reduce((a, b) => a + b, 0) / values.length
+      avg: values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0
     }));
   };
 
