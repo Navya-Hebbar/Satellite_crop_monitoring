@@ -432,6 +432,10 @@ app.post('/api/generate-report', async (req, res) => {
     }
   } catch (error) {
     console.error('Gemini API Error:', error);
+    const errStr = String(error);
+    if (errStr.includes('429') || errStr.toLowerCase().includes('quota') || errStr.toLowerCase().includes('limit')) {
+      return res.status(429).json({ error: 'Gemini API free tier quota limit reached. Please retry later.' });
+    }
     res.status(500).json({ error: 'Failed to generate AI report.' });
   }
 });
@@ -487,6 +491,10 @@ app.post('/api/generate-forecast-report', async (req, res) => {
     }
   } catch (error) {
     console.error('Gemini API Error:', error);
+    const errStr = String(error);
+    if (errStr.includes('429') || errStr.toLowerCase().includes('quota') || errStr.toLowerCase().includes('limit')) {
+      return res.status(429).json({ error: 'Gemini API free tier quota limit reached. Please retry later.' });
+    }
     res.status(500).json({ error: 'Failed to generate AI forecast report.' });
   }
 });

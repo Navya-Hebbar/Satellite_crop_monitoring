@@ -59,6 +59,7 @@ export default function ForecastDashboard() {
   const [aiReport, setAiReport] = useState(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [printImages, setPrintImages] = useState({ comparison: null });
+  const [reportCache, setReportCache] = useState({});
 
   const { startDate, endDate } = useMemo(
     () => rangeFromPreset(preset, customStart, customEnd),
@@ -117,6 +118,16 @@ export default function ForecastDashboard() {
   }, [fetchDashboard]);
 
   const generateAIReport = async (regionsData) => {
+    if (!regionsData || regionsData.length === 0) return;
+    
+    // Cache key based on sorted regions and start/end dates
+    const cacheKey = `${selectedRegions.slice().sort().join(',')}|${startDate}|${endDate}`;
+    
+    if (reportCache[cacheKey]) {
+      setAiReport(reportCache[cacheKey]);
+      return;
+    }
+
     setIsGeneratingReport(true);
     setAiReport(null);
     try {
@@ -130,6 +141,7 @@ export default function ForecastDashboard() {
         setAiReport(`Error: ${result.error}`);
       } else {
         setAiReport(result.report);
+        setReportCache((prev) => ({ ...prev, [cacheKey]: result.report }));
       }
     } catch (err) {
       setAiReport('Failed to connect to AI service.');
@@ -142,7 +154,7 @@ export default function ForecastDashboard() {
     if (data && data.regions && data.regions.length > 0) {
       generateAIReport(data.regions);
     }
-  }, [data]);
+  }, [data, startDate, endDate]);
 
   const primaryRegion = data?.regions?.[0];
   const prediction = primaryRegion?.prediction;
