@@ -138,17 +138,17 @@ const Dashboard = () => {
   const exportToPDF = async () => {
     const compNode = document.getElementById('render-comp-chart');
     const barNode = document.getElementById('render-bar-chart');
-    
+
     if (compNode) {
       try {
         const compCanvas = await html2canvas(compNode, { scale: 2, backgroundColor: '#ffffff' });
         const barCanvas = barNode ? await html2canvas(barNode, { scale: 2, backgroundColor: '#ffffff' }) : null;
-        
+
         setPrintImages({
           comparison: compCanvas.toDataURL('image/png'),
           barChart: barCanvas ? barCanvas.toDataURL('image/png') : null
         });
-        
+
         setTimeout(() => {
           window.print();
         }, 300);
@@ -272,582 +272,580 @@ const Dashboard = () => {
       {/* --- DASHBOARD VIEW (HIDDEN ON PRINT) --- */}
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 print:hidden">
 
-      {/* Custom Location Modal */}
-      <AnimatePresence>
-        {showCustomModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-            onClick={() => setShowCustomModal(false)}
-          >
+        {/* Custom Location Modal */}
+        <AnimatePresence>
+          {showCustomModal && (
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="glass p-8 rounded-[2rem] border border-white/10 w-full max-w-md space-y-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+              onClick={() => setShowCustomModal(false)}
             >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-black text-white flex items-center">
-                  <MapPin className="w-5 h-5 mr-2 text-cyan-400" />
-                  Add Custom Location
-                </h3>
-                <button onClick={() => setShowCustomModal(false)} className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors">
-                  <X className="w-5 h-5" />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="glass p-8 rounded-[2rem] border border-white/10 w-full max-w-md space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-black text-white flex items-center">
+                    <MapPin className="w-5 h-5 mr-2 text-cyan-400" />
+                    Add Custom Location
+                  </h3>
+                  <button onClick={() => setShowCustomModal(false)} className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Location Name</label>
+                    <input
+                      type="text"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      placeholder="e.g. New Delhi"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Latitude</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={customLat}
+                        onChange={(e) => setCustomLat(e.target.value)}
+                        placeholder="28.6139"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Longitude</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={customLng}
+                        onChange={(e) => setCustomLng(e.target.value)}
+                        placeholder="77.2090"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleAddCustomRegion}
+                  disabled={!customName.trim() || !customLat || !customLng}
+                  className="w-full py-3 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 rounded-xl text-cyan-300 font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  🛰️ Deploy Satellite Scan
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* Slot Selection & Mission Parameters */}
+        <div className="flex flex-col gap-8 print:hidden">
+          <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <AnimatePresence mode="popLayout">
+                {selectedRegions.map((city, idx) => (
+                  <motion.div
+                    key={`${city}-${idx}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center space-x-2 bg-white/5 border border-white/10 p-1.5 pl-3 rounded-xl hover:border-white/20 transition-colors"
+                  >
+                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: COLORS[idx] }} />
+                    <select
+                      value={city}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setCustomSlotIndex(idx);
+                          setShowCustomModal(true);
+                        } else {
+                          updateSlot(idx, e.target.value);
+                        }
+                      }}
+                      className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer pr-1"
+                    >
+                      {allCities.map(c => (
+                        <option key={c} value={c} className="bg-[#0f172a]">{c}</option>
+                      ))}
+                      <option value="__custom__" className="bg-[#0f172a] text-emerald-400">📍 Custom Location...</option>
+                    </select>
+                    {selectedRegions.length > 1 && (
+                      <button
+                        onClick={() => removeSlot(idx)}
+                        className="p-1 hover:bg-white/10 rounded-lg text-slate-500 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {selectedRegions.length < 5 && (
+                <>
+                  <button
+                    onClick={addSlot}
+                    className="flex items-center space-x-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-bold transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Region</span>
+                  </button>
+                  <button
+                    onClick={() => { setCustomSlotIndex(null); setShowCustomModal(true); }}
+                    className="flex items-center space-x-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl text-cyan-400 text-sm font-bold transition-all"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    <span>Custom</span>
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-6">
+              <div className="flex gap-2">
+                <button onClick={exportToPDF} className="flex items-center space-x-2 px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl text-purple-400 text-sm font-bold transition-all">
+                  <FileText className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export PDF</span>
                 </button>
               </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Location Name</label>
-                  <input
-                    type="text"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="e.g. New Delhi"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Latitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={customLat}
-                      onChange={(e) => setCustomLat(e.target.value)}
-                      placeholder="28.6139"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
+              <div className="text-right hidden sm:block">
+                <p className="text-[10px] text-slate-500 font-black tracking-widest uppercase">Mission Status</p>
+                <p className="text-sm font-bold text-white uppercase tracking-tighter">
+                  {selectedRegions.length > 1 ? 'Multi-Sector Benchmark' : 'Single Grid Recon'}
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <Monitor className="w-6 h-6 text-emerald-400" />
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic Mission Parameters Panel */}
+          <div className="glass p-8 rounded-[2rem] border border-white/10 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-3">
+              <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
+                <Calendar className="w-3 h-3 mr-2 text-emerald-400" />
+                Analysis Start
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-emerald-500/50 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
+                <Calendar className="w-3 h-3 mr-2 text-blue-400" />
+                Analysis End
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-blue-500/50 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
+                  <Shield className="w-3 h-3 mr-2 text-yellow-400" />
+                  Scanning Buffer
+                </label>
+                <span className="text-[10px] font-mono text-white bg-white/5 px-2 py-0.5 rounded-md">{bufferSize}m</span>
+              </div>
+              <input
+                type="range"
+                min="100" max="5000" step="100"
+                value={bufferSize}
+                onChange={(e) => setBufferSize(parseInt(e.target.value))}
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* KPI Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KPICard
+            title="Average Health"
+            value={stats.avg}
+            subValue={stats.currentStatus}
+            icon={Activity}
+            color="text-emerald-400"
+          />
+          <KPICard
+            title="Peak NDVI"
+            value={stats.max}
+            subValue={stats.maxDate ? `On ${stats.maxDate}` : 'Highest Point'}
+            icon={TrendingUp}
+            color="text-blue-400"
+          />
+          <KPICard
+            title="Min Index"
+            value={stats.min}
+            subValue={stats.minDate ? `On ${stats.minDate}` : 'Stress Point'}
+            icon={AlertTriangle}
+            color="text-red-400"
+          />
+          <KPICard
+            title="Active Sectors"
+            value={selectedRegions.length}
+            subValue={loading ? "Syncing..." : "GEE Sync: Live"}
+            icon={Shield}
+            color="text-indigo-400"
+          />
+        </div>
+
+        {/* Regional Comparison Table */}
+        {selectedRegions.length > 1 && (
+          <div className="glass p-8 rounded-[2.5rem] border border-white/10 overflow-hidden mt-8">
+            <h3 className="text-lg font-bold text-white mb-6 flex items-center uppercase tracking-tighter">
+              <Layers className="w-5 h-5 mr-2 text-blue-400" />
+              Regional Comparison
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              {/* Table (Left) */}
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left">
+                  <thead className="text-[10px] text-slate-500 uppercase tracking-[0.2em] border-b border-white/10">
+                    <tr>
+                      <th className="px-4 py-4">Region</th>
+                      <th className="px-4 py-4 text-center">Avg Health</th>
+                      <th className="px-4 py-4 text-center">Status</th>
+                      <th className="px-4 py-4 text-center">Peak NDVI</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-mono text-sm">
+                    {selectedRegions.map(region => {
+                      const rStats = allRegionsStats[region];
+                      if (!rStats) return null;
+                      return (
+                        <tr key={region} className="hover:bg-white/5 transition-colors">
+                          <td className="px-4 py-4 font-sans font-bold text-white">{region}</td>
+                          <td className="px-4 py-4 text-center text-emerald-400 font-bold">{rStats.avg}</td>
+                          <td className="px-4 py-4 text-center">
+                            <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase border ${rStats.currentStatus === 'Healthy' ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/10' :
+                                rStats.currentStatus === 'Moderate' ? 'border-yellow-500/20 text-yellow-400 bg-yellow-500/10' :
+                                  'border-red-500/20 text-red-400 bg-red-500/10'
+                              }`}>
+                              {rStats.currentStatus}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-center text-blue-400 font-bold">{rStats.max}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bar Chart (Right) */}
+              <div className="h-[250px] w-full bg-white/5 rounded-2xl p-4 border border-white/5 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={selectedRegions.map(r => ({
+                    name: r,
+                    Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
+                    Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
+                  }))} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={11} domain={[0, 1]} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      cursor={{ fill: '#ffffff0a' }}
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                      itemStyle={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 'bold' }}
+                      labelStyle={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', marginBottom: '4px' }}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Longitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={customLng}
-                      onChange={(e) => setCustomLng(e.target.value)}
-                      placeholder="77.2090"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-cyan-500/50 outline-none transition-all placeholder:text-slate-600"
-                    />
-                  </div>
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
+                    <Bar dataKey="Average" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="Peak" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Trend Benchmarking */}
+          <div className="lg:col-span-2 glass p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+            {loading && (
+              <div className="absolute inset-0 bg-[#0f172a]/40 backdrop-blur-sm z-50 flex items-center justify-center rounded-[2.5rem]">
+                <div className="flex flex-col items-center">
+                  <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-2" />
+                  <p className="text-[10px] text-emerald-400 font-black tracking-widest uppercase animate-pulse">Re-syncing GEE Feed...</p>
                 </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-black text-white tracking-tight flex items-center">
+                  <TrendingUp className="w-5 h-5 mr-2 text-emerald-400" />
+                  Comparative NDVI Timeline
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest">Multi-spectral temporal distribution</p>
               </div>
               <button
-                onClick={handleAddCustomRegion}
-                disabled={!customName.trim() || !customLat || !customLng}
-                className="w-full py-3 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 rounded-xl text-cyan-300 font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={() => setShowYoY(!showYoY)}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showYoY ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
               >
-                🛰️ Deploy Satellite Scan
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {/* Slot Selection & Mission Parameters */}
-      <div className="flex flex-col gap-8 print:hidden">
-        <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <AnimatePresence mode="popLayout">
-              {selectedRegions.map((city, idx) => (
-                <motion.div
-                  key={`${city}-${idx}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center space-x-2 bg-white/5 border border-white/10 p-1.5 pl-3 rounded-xl hover:border-white/20 transition-colors"
-                >
-                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: COLORS[idx] }} />
-                  <select
-                    value={city}
-                    onChange={(e) => {
-                      if (e.target.value === '__custom__') {
-                        setCustomSlotIndex(idx);
-                        setShowCustomModal(true);
-                      } else {
-                        updateSlot(idx, e.target.value);
-                      }
-                    }}
-                    className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer pr-1"
-                  >
-                    {allCities.map(c => (
-                      <option key={c} value={c} className="bg-[#0f172a]">{c}</option>
-                    ))}
-                    <option value="__custom__" className="bg-[#0f172a] text-emerald-400">📍 Custom Location...</option>
-                  </select>
-                  {selectedRegions.length > 1 && (
-                    <button
-                      onClick={() => removeSlot(idx)}
-                      className="p-1 hover:bg-white/10 rounded-lg text-slate-500 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {selectedRegions.length < 5 && (
-              <>
-                <button
-                  onClick={addSlot}
-                  className="flex items-center space-x-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-bold transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Region</span>
-                </button>
-                <button
-                  onClick={() => { setCustomSlotIndex(null); setShowCustomModal(true); }}
-                  className="flex items-center space-x-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl text-cyan-400 text-sm font-bold transition-all"
-                >
-                  <MapPin className="w-4 h-4" />
-                  <span>Custom</span>
-                </button>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-6">
-            <div className="flex gap-2">
-              <button onClick={exportToPDF} className="flex items-center space-x-2 px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl text-purple-400 text-sm font-bold transition-all">
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Export PDF</span>
+                <History className="w-3.5 h-3.5" />
+                <span>YoY Compare</span>
               </button>
             </div>
-            <div className="text-right hidden sm:block">
-              <p className="text-[10px] text-slate-500 font-black tracking-widest uppercase">Mission Status</p>
-              <p className="text-sm font-bold text-white uppercase tracking-tighter">
-                {selectedRegions.length > 1 ? 'Multi-Sector Benchmark' : 'Single Grid Recon'}
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <Monitor className="w-6 h-6 text-emerald-400" />
-            </div>
-          </div>
-        </div>
 
-        {/* Dynamic Mission Parameters Panel */}
-        <div className="glass p-8 rounded-[2rem] border border-white/10 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="space-y-3">
-            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
-              <Calendar className="w-3 h-3 mr-2 text-emerald-400" />
-              Analysis Start
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-emerald-500/50 outline-none transition-all"
-            />
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
-              <Calendar className="w-3 h-3 mr-2 text-blue-400" />
-              Analysis End
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm font-bold focus:border-blue-500/50 outline-none transition-all"
-            />
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center">
-                <Shield className="w-3 h-3 mr-2 text-yellow-400" />
-                Scanning Buffer
-              </label>
-              <span className="text-[10px] font-mono text-white bg-white/5 px-2 py-0.5 rounded-md">{bufferSize}m</span>
-            </div>
-            <input
-              type="range"
-              min="100" max="5000" step="100"
-              value={bufferSize}
-              onChange={(e) => setBufferSize(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard
-          title="Average Health"
-          value={stats.avg}
-          subValue={stats.currentStatus}
-          icon={Activity}
-          color="text-emerald-400"
-        />
-        <KPICard
-          title="Peak NDVI"
-          value={stats.max}
-          subValue={stats.maxDate ? `On ${stats.maxDate}` : 'Highest Point'}
-          icon={TrendingUp}
-          color="text-blue-400"
-        />
-        <KPICard
-          title="Min Index"
-          value={stats.min}
-          subValue={stats.minDate ? `On ${stats.minDate}` : 'Stress Point'}
-          icon={AlertTriangle}
-          color="text-red-400"
-        />
-        <KPICard
-          title="Active Sectors"
-          value={selectedRegions.length}
-          subValue={loading ? "Syncing..." : "GEE Sync: Live"}
-          icon={Shield}
-          color="text-indigo-400"
-        />
-      </div>
-
-      {/* Regional Comparison Table */}
-      {selectedRegions.length > 1 && (
-        <div className="glass p-8 rounded-[2.5rem] border border-white/10 overflow-hidden mt-8">
-          <h3 className="text-lg font-bold text-white mb-6 flex items-center uppercase tracking-tighter">
-            <Layers className="w-5 h-5 mr-2 text-blue-400" />
-            Regional Comparison
-          </h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            {/* Table (Left) */}
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left">
-                <thead className="text-[10px] text-slate-500 uppercase tracking-[0.2em] border-b border-white/10">
-                  <tr>
-                    <th className="px-4 py-4">Region</th>
-                    <th className="px-4 py-4 text-center">Avg Health</th>
-                    <th className="px-4 py-4 text-center">Status</th>
-                    <th className="px-4 py-4 text-center">Peak NDVI</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 font-mono text-sm">
-                  {selectedRegions.map(region => {
-                    const rStats = allRegionsStats[region];
-                    if (!rStats) return null;
-                    return (
-                      <tr key={region} className="hover:bg-white/5 transition-colors">
-                        <td className="px-4 py-4 font-sans font-bold text-white">{region}</td>
-                        <td className="px-4 py-4 text-center text-emerald-400 font-bold">{rStats.avg}</td>
-                        <td className="px-4 py-4 text-center">
-                          <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase border ${
-                              rStats.currentStatus === 'Healthy' ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/10' :
-                              rStats.currentStatus === 'Moderate' ? 'border-yellow-500/20 text-yellow-400 bg-yellow-500/10' :
-                              'border-red-500/20 text-red-400 bg-red-500/10'
-                            }`}>
-                            {rStats.currentStatus}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-center text-blue-400 font-bold">{rStats.max}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Bar Chart (Right) */}
-            <div className="h-[250px] w-full bg-white/5 rounded-2xl p-4 border border-white/5 relative">
+            <div className="h-[350px] w-full relative">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={selectedRegions.map(r => ({
-                  name: r,
-                  Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
-                  Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
-                }))} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} domain={[0, 1]} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    cursor={{ fill: '#ffffff0a' }}
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
-                    itemStyle={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 'bold' }}
-                    labelStyle={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', marginBottom: '4px' }}
+                <LineChart data={comparisonData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#475569"
+                    fontSize={10}
+                    tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
-                  <Bar dataKey="Average" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="Peak" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
+                  <YAxis
+                    stroke="#475569"
+                    fontSize={10}
+                    domain={[0.2, 1]}
+                    tickFormatter={(val) => Number(val).toFixed(2)}
+                  />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                    itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px' }} />
+                  {selectedRegions.map((region, idx) => (
+                    <Line
+                      key={region}
+                      type="monotone"
+                      dataKey={region}
+                      stroke={COLORS[idx % COLORS.length]}
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{ r: 6, strokeWidth: 0 }}
+                      connectNulls
+                    />
+                  ))}
+                  {showYoY && selectedRegions.map((region, idx) => (
+                    <Line
+                      key={`${region} (Prev Year)`}
+                      type="monotone"
+                      dataKey={`${region} (Prev Year)`}
+                      stroke={COLORS[idx % COLORS.length]}
+                      strokeWidth={1.5}
+                      strokeDasharray="5 5"
+                      dot={false}
+                      activeDot={false}
+                      connectNulls
+                    />
+                  ))}
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
-        </div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Trend Benchmarking */}
-        <div className="lg:col-span-2 glass p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group">
-          {loading && (
-            <div className="absolute inset-0 bg-[#0f172a]/40 backdrop-blur-sm z-50 flex items-center justify-center rounded-[2.5rem]">
-              <div className="flex flex-col items-center">
-                <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-[10px] text-emerald-400 font-black tracking-widest uppercase animate-pulse">Re-syncing GEE Feed...</p>
-              </div>
-            </div>
-          )}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-xl font-black text-white tracking-tight flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2 text-emerald-400" />
-                Comparative NDVI Timeline
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest">Multi-spectral temporal distribution</p>
-            </div>
-            <button
-              onClick={() => setShowYoY(!showYoY)}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${showYoY ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>YoY Compare</span>
-            </button>
-          </div>
-
-          <div className="h-[350px] w-full relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={comparisonData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  stroke="#475569"
-                  fontSize={10}
-                  tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                />
-                <YAxis
-                  stroke="#475569"
-                  fontSize={10}
-                  domain={[0.2, 1]}
-                  tickFormatter={(val) => Number(val).toFixed(2)}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                  itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px' }} />
-                {selectedRegions.map((region, idx) => (
-                  <Line
-                    key={region}
-                    type="monotone"
-                    dataKey={region}
-                    stroke={COLORS[idx % COLORS.length]}
-                    strokeWidth={3}
-                    dot={false}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                    connectNulls
-                  />
-                ))}
-                {showYoY && selectedRegions.map((region, idx) => (
-                  <Line
-                    key={`${region} (Prev Year)`}
-                    type="monotone"
-                    dataKey={`${region} (Prev Year)`}
-                    stroke={COLORS[idx % COLORS.length]}
-                    strokeWidth={1.5}
-                    strokeDasharray="5 5"
-                    dot={false}
-                    activeDot={false}
-                    connectNulls
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Health Distribution Panel */}
-        <div className="glass p-8 rounded-[2.5rem] border border-white/10 flex flex-col">
-          <h3 className="text-lg font-bold text-white mb-6 flex items-center uppercase tracking-tighter">
-            <Activity className="w-5 h-5 mr-2 text-emerald-400" />
-            Vegetation Stress Distribution
-          </h3>
-
-          <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar max-h-[400px]">
-            {selectedRegions.map((city, idx) => {
-              const regionData = allRegionsData[city] || [];
-              const total = regionData.length || 1;
-              const healthyCount = regionData.filter(d => d.ndvi > 0.6).length;
-              const moderateCount = regionData.filter(d => d.ndvi >= 0.3 && d.ndvi <= 0.6).length;
-              const unhealthyCount = regionData.filter(d => d.ndvi < 0.3).length;
-
-              return (
-                <div key={city} className="space-y-2 p-3 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group">
-                  <div className="flex justify-between items-end">
-                    <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">{city}</span>
-                    <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">{idx === 0 ? 'Primary' : `Slot ${idx + 1}`}</span>
-                  </div>
-                  <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden flex">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${(healthyCount / total) * 100}%` }} className="h-full bg-emerald-500" />
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${(moderateCount / total) * 100}%` }} className="h-full bg-yellow-500" />
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${(unhealthyCount / total) * 100}%` }} className="h-full bg-red-500" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-8">
-        {/* Seasonal Trends */}
-        <div className="glass p-8 rounded-[2.5rem] border border-white/10 w-full">
-          <h3 className="text-xl font-black text-white mb-6 flex items-center">
-            <Calendar className="w-5 h-5 mr-2 text-emerald-400" />
-            Seasonal Performance
-          </h3>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={multiSeasonalTrends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="month" stroke="#475569" fontSize={10} />
-                <YAxis stroke="#475569" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                {selectedRegions.map((region, idx) => (
-                  <Area
-                    key={region}
-                    type="monotone"
-                    dataKey={region}
-                    stroke={COLORS[idx % COLORS.length]}
-                    fill={COLORS[idx % COLORS.length]}
-                    fillOpacity={0.1}
-                  />
-                ))}
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Intelligence Hub */}
-        <div className="glass p-8 rounded-[2.5rem] border border-white/10 flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-black text-white flex items-center">
-              <Shield className="w-5 h-5 mr-2 text-emerald-400" />
-              AI Insights Hub
+          {/* Health Distribution Panel */}
+          <div className="glass p-8 rounded-[2.5rem] border border-white/10 flex flex-col">
+            <h3 className="text-lg font-bold text-white mb-6 flex items-center uppercase tracking-tighter">
+              <Activity className="w-5 h-5 mr-2 text-emerald-400" />
+              Vegetation Stress Distribution
             </h3>
-            <button
-              onClick={generateAIReport}
-              disabled={isGeneratingReport}
-              className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/50 rounded-xl text-indigo-300 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGeneratingReport ? 'Generating...' : '✨ Generate AI Report'}
-            </button>
-          </div>
-          <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {!aiReport && !isGeneratingReport && (
-              <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start space-x-4">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-1" />
-                <div>
-                  <p className="text-sm font-bold text-white">System Synchronized</p>
-                  <p className="text-xs text-slate-500">Live feed active for {selectedRegions.length} sectors. Click 'Generate' for AI analysis.</p>
-                </div>
-              </div>
-            )}
-            {isGeneratingReport && (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-            {aiReport && !isGeneratingReport && typeof aiReport === 'object' && (
-              <div className="grid grid-cols-1 gap-6">
-                {/* KEY OBSERVATIONS */}
-                <div className="p-6 rounded-2xl border border-blue-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                  <h4 className="text-[11px] font-black uppercase text-blue-400 mb-4 tracking-widest">Key Observations</h4>
-                  <ul className="space-y-3">
-                    {aiReport.key_observations?.map((item, i) => (
-                      <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
-                    ))}
-                  </ul>
-                </div>
-                {/* POSSIBLE CAUSES */}
-                <div className="p-6 rounded-2xl border border-yellow-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
-                  <h4 className="text-[11px] font-black uppercase text-yellow-400 mb-4 tracking-widest">Possible Causes</h4>
-                  <ul className="space-y-3">
-                    {aiReport.possible_causes?.map((item, i) => (
-                      <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
-                    ))}
-                  </ul>
-                </div>
-                {/* RECOMMENDED ACTIONS */}
-                <div className="p-6 rounded-2xl border border-purple-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
-                  <h4 className="text-[11px] font-black uppercase text-purple-400 mb-4 tracking-widest">Recommended Actions</h4>
-                  <ul className="space-y-3">
-                    {aiReport.recommended_actions?.map((item, i) => (
-                      <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
+
+            <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar max-h-[400px]">
+              {selectedRegions.map((city, idx) => {
+                const regionData = allRegionsData[city] || [];
+                const total = regionData.length || 1;
+                const healthyCount = regionData.filter(d => d.ndvi > 0.6).length;
+                const moderateCount = regionData.filter(d => d.ndvi >= 0.3 && d.ndvi <= 0.6).length;
+                const unhealthyCount = regionData.filter(d => d.ndvi < 0.3).length;
+
+                return (
+                  <div key={city} className="space-y-2 p-3 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group">
+                    <div className="flex justify-between items-end">
+                      <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">{city}</span>
+                      <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">{idx === 0 ? 'Primary' : `Slot ${idx + 1}`}</span>
+                    </div>
+                    <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden flex">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${(healthyCount / total) * 100}%` }} className="h-full bg-emerald-500" />
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${(moderateCount / total) * 100}%` }} className="h-full bg-yellow-500" />
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${(unhealthyCount / total) * 100}%` }} className="h-full bg-red-500" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Log Registry - Hidden from report to keep it concise */}
-      <div className="glass rounded-[2.5rem] border border-white/10 overflow-hidden print:hidden">
-        <div className="px-8 py-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 gap-4">
-          <h3 className="text-xl font-black text-white uppercase tracking-tight">Spectral Log Registry</h3>
+        <div className="space-y-8">
+          {/* Seasonal Trends */}
+          <div className="glass p-8 rounded-[2.5rem] border border-white/10 w-full">
+            <h3 className="text-xl font-black text-white mb-6 flex items-center">
+              <Calendar className="w-5 h-5 mr-2 text-emerald-400" />
+              Seasonal Performance
+            </h3>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={multiSeasonalTrends}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis dataKey="month" stroke="#475569" fontSize={10} />
+                  <YAxis stroke="#475569" fontSize={10} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
+                  {selectedRegions.map((region, idx) => (
+                    <Area
+                      key={region}
+                      type="monotone"
+                      dataKey={region}
+                      stroke={COLORS[idx % COLORS.length]}
+                      fill={COLORS[idx % COLORS.length]}
+                      fillOpacity={0.1}
+                    />
+                  ))}
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-          {/* Tabs for Regions */}
-          <div className="flex flex-wrap gap-2">
-            {selectedRegions.map((region) => (
+          {/* Intelligence Hub */}
+          <div className="glass p-8 rounded-[2.5rem] border border-white/10 flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black text-white flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-emerald-400" />
+                AI Insights Hub
+              </h3>
               <button
-                key={region}
-                onClick={() => setActiveLogRegion(region)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${currentLogRegion === region
+                onClick={generateAIReport}
+                disabled={isGeneratingReport}
+                className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/50 rounded-xl text-indigo-300 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGeneratingReport ? 'Generating...' : '✨ Generate AI Report'}
+              </button>
+            </div>
+            <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {!aiReport && !isGeneratingReport && (
+                <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start space-x-4">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-1" />
+                  <div>
+                    <p className="text-sm font-bold text-white">System Synchronized</p>
+                    <p className="text-xs text-slate-500">Live feed active for {selectedRegions.length} sectors. Click 'Generate' for AI analysis.</p>
+                  </div>
+                </div>
+              )}
+              {isGeneratingReport && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              {aiReport && !isGeneratingReport && typeof aiReport === 'object' && (
+                <div className="grid grid-cols-1 gap-6">
+                  {/* KEY OBSERVATIONS */}
+                  <div className="p-6 rounded-2xl border border-blue-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                    <h4 className="text-[11px] font-black uppercase text-blue-400 mb-4 tracking-widest">Key Observations</h4>
+                    <ul className="space-y-3">
+                      {aiReport.key_observations?.map((item, i) => (
+                        <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {/* POSSIBLE CAUSES */}
+                  <div className="p-6 rounded-2xl border border-yellow-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                    <h4 className="text-[11px] font-black uppercase text-yellow-400 mb-4 tracking-widest">Possible Causes</h4>
+                    <ul className="space-y-3">
+                      {aiReport.possible_causes?.map((item, i) => (
+                        <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {/* RECOMMENDED ACTIONS */}
+                  <div className="p-6 rounded-2xl border border-purple-500/30 bg-[#0f172a]/80 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                    <h4 className="text-[11px] font-black uppercase text-purple-400 mb-4 tracking-widest">Recommended Actions</h4>
+                    <ul className="space-y-3">
+                      {aiReport.recommended_actions?.map((item, i) => (
+                        <li key={i} className="text-sm text-slate-300 leading-relaxed">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Log Registry - Hidden from report to keep it concise */}
+        <div className="glass rounded-[2.5rem] border border-white/10 overflow-hidden print:hidden">
+          <div className="px-8 py-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 gap-4">
+            <h3 className="text-xl font-black text-white uppercase tracking-tight">Spectral Log Registry</h3>
+
+            {/* Tabs for Regions */}
+            <div className="flex flex-wrap gap-2">
+              {selectedRegions.map((region) => (
+                <button
+                  key={region}
+                  onClick={() => setActiveLogRegion(region)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${currentLogRegion === region
                     ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
                     : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                  }`}
-              >
-                {region}
-              </button>
-            ))}
+                    }`}
+                >
+                  {region}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+            <table className="w-full text-left">
+              <thead className="text-[10px] text-slate-500 uppercase tracking-[0.2em] bg-white/2 sticky top-0 z-10 backdrop-blur-md">
+                <tr>
+                  <th className="px-8 py-5">Timestamp</th>
+                  <th className="px-8 py-5">NDVI Index</th>
+                  <th className="px-8 py-5">Status</th>
+                  <th className="px-8 py-5 text-right">Trend</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-mono text-[11px]">
+                {Array.isArray(logData) && logData.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-white/5 transition-colors">
+                    <td className="px-8 py-4 text-slate-400">{row.date}</td>
+                    <td className="px-8 py-4 text-white font-bold matrix-text">
+                      {row.ndvi != null ? row.ndvi.toFixed(4) : 'N/A'}
+                    </td>
+                    <td className="px-8 py-4">
+                      <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${row.ndvi != null && row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' :
+                          row.ndvi != null && row.ndvi >= 0.3 ? 'border-yellow-500/20 text-yellow-400' :
+                            row.ndvi == null ? 'border-white/10 text-slate-400 bg-white/5' :
+                              'border-red-500/20 text-red-400 bg-red-500/10'
+                        }`}>
+                        {row.ndvi != null ? (row.ndvi > 0.6 ? 'Healthy' : row.ndvi >= 0.3 ? 'Moderate' : 'Stress') : 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-8 py-4 text-right">
+                      {idx > 0 && logData[idx - 1].ndvi != null && row.ndvi != null && logData[idx - 1].ndvi < row.ndvi ? (
+                        <ArrowUpRight className="inline w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <TrendingDown className="inline w-4 h-4 text-red-500/30" />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-        <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-          <table className="w-full text-left">
-            <thead className="text-[10px] text-slate-500 uppercase tracking-[0.2em] bg-white/2 sticky top-0 z-10 backdrop-blur-md">
-              <tr>
-                <th className="px-8 py-5">Timestamp</th>
-                <th className="px-8 py-5">NDVI Index</th>
-                <th className="px-8 py-5">Status</th>
-                <th className="px-8 py-5 text-right">Trend</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5 font-mono text-[11px]">
-              {Array.isArray(logData) && logData.map((row, idx) => (
-                <tr key={idx} className="hover:bg-white/5 transition-colors">
-                  <td className="px-8 py-4 text-slate-400">{row.date}</td>
-                  <td className="px-8 py-4 text-white font-bold matrix-text">
-                    {row.ndvi != null ? row.ndvi.toFixed(4) : 'N/A'}
-                  </td>
-                  <td className="px-8 py-4">
-                    <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border ${
-                        row.ndvi != null && row.ndvi > 0.6 ? 'border-emerald-500/20 text-emerald-400' :
-                        row.ndvi != null && row.ndvi >= 0.3 ? 'border-yellow-500/20 text-yellow-400' :
-                        row.ndvi == null ? 'border-white/10 text-slate-400 bg-white/5' :
-                        'border-red-500/20 text-red-400 bg-red-500/10'
-                      }`}>
-                      {row.ndvi != null ? (row.ndvi > 0.6 ? 'Healthy' : row.ndvi >= 0.3 ? 'Moderate' : 'Stress') : 'N/A'}
-                    </span>
-                  </td>
-                  <td className="px-8 py-4 text-right">
-                    {idx > 0 && logData[idx - 1].ndvi != null && row.ndvi != null && logData[idx - 1].ndvi < row.ndvi ? (
-                      <ArrowUpRight className="inline w-4 h-4 text-emerald-400" />
-                    ) : (
-                      <TrendingDown className="inline w-4 h-4 text-red-500/30" />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-    </div>
+      </div>
 
       {/* --- FORMAL PRINT REPORT VIEW --- */}
       <div className="hidden print:block font-sans text-gray-900 bg-white min-h-screen p-8 relative">
-        
+
         {/* Repeating Footer */}
         <div className="fixed bottom-4 left-8 right-8 flex justify-between text-xs text-gray-500 border-t border-gray-300 pt-3 bg-white z-50">
           <span className="font-bold">SatCrop Intelligence Platform</span>
@@ -905,8 +903,8 @@ const Dashboard = () => {
                     <tr key={region} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                       <td className="p-3 border-b border-gray-300 border-r border-gray-800 font-bold">{region}</td>
                       <td className="p-3 border-b border-gray-300 border-r border-gray-800 text-center font-bold text-emerald-700">{rStats.avg}</td>
-                      <td className="p-3 border-b border-gray-300 border-r border-gray-800 text-center font-bold" 
-                          style={{ color: rStats.currentStatus === 'Healthy' ? '#047857' : rStats.currentStatus === 'Moderate' ? '#b45309' : '#b91c1c' }}>
+                      <td className="p-3 border-b border-gray-300 border-r border-gray-800 text-center font-bold"
+                        style={{ color: rStats.currentStatus === 'Healthy' ? '#047857' : rStats.currentStatus === 'Moderate' ? '#b45309' : '#b91c1c' }}>
                         {rStats.currentStatus}
                       </td>
                       <td className="p-3 border-b border-gray-300 border-r border-gray-800 text-center text-blue-700 font-bold">{rStats.max} <span className="block text-[10px] text-gray-500 font-normal">({rStats.maxDate})</span></td>
@@ -923,10 +921,10 @@ const Dashboard = () => {
               <img src={printImages.barChart} alt="Regional Comparison Bar Chart" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : (
               <BarChart data={selectedRegions.map(r => ({
-                  name: r,
-                  Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
-                  Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
-                }))} width={650} height={300} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                name: r,
+                Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
+                Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
+              }))} width={650} height={300} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                 <XAxis dataKey="name" stroke="#374151" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="#374151" fontSize={11} domain={[0, 1]} tickLine={false} axisLine={false} />
@@ -939,71 +937,71 @@ const Dashboard = () => {
 
           <div className="border-2 border-indigo-900 rounded-sm p-6 bg-indigo-50/50 leading-relaxed mt-8 avoid-break">
             <h3 className="font-black text-indigo-900 mb-3 uppercase tracking-wider flex items-center">
-                AI Diagnostic Insights
-              </h3>
-              <div className="whitespace-pre-wrap text-sm text-gray-800">
-                {aiReport ? (
-                  typeof aiReport === 'object' ? (
-                    <div className="space-y-4">
-                      <div>
-                        <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Key Observations:</p>
-                        <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.key_observations?.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                      </div>
-                      <div>
-                        <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Possible Causes:</p>
-                        <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.possible_causes?.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                      </div>
-                      <div>
-                        <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Recommended Actions:</p>
-                        <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.recommended_actions?.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                      </div>
+              AI Diagnostic Insights
+            </h3>
+            <div className="whitespace-pre-wrap text-sm text-gray-800">
+              {aiReport ? (
+                typeof aiReport === 'object' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Key Observations:</p>
+                      <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.key_observations?.map((item, i) => <li key={i}>{item}</li>)}</ul>
                     </div>
-                  ) : aiReport
-                ) : <span className="italic text-gray-500">No AI insights generated. Click 'Generate AI Report' on the dashboard prior to export.</span>}
-              </div>
+                    <div>
+                      <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Possible Causes:</p>
+                      <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.possible_causes?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                    </div>
+                    <div>
+                      <p className="font-bold text-indigo-900 mb-1 border-b border-indigo-200 inline-block">Recommended Actions:</p>
+                      <ul className="list-disc pl-5 mt-1 space-y-1">{aiReport.recommended_actions?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                    </div>
+                  </div>
+                ) : aiReport
+              ) : <span className="italic text-gray-500">No AI insights generated. Click 'Generate AI Report' on the dashboard prior to export.</span>}
             </div>
           </div>
+        </div>
 
-          {/* Charts Section */}
-          <div className="mb-8 break-inside-avoid">
-             <h2 className="text-lg font-bold mb-4 text-gray-800 uppercase tracking-wider border-b-2 border-gray-200 pb-1">2. Temporal NDVI Analysis</h2>
-             <div className="border-2 border-gray-800 rounded-sm p-4 bg-white mx-auto flex justify-center" style={{ width: '100%', height: '320px' }}>
-               {printImages.comparison ? (
-                 <img src={printImages.comparison} alt="Temporal Analysis Chart" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-               ) : (
-                 <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
-                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                   <XAxis dataKey="date" stroke="#374151" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
-                   <YAxis stroke="#374151" fontSize={11} domain={[0.2, 1]} tickFormatter={(val) => Number(val).toFixed(2)} width={35} />
-                   <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
-                   {selectedRegions.map((region, idx) => (
-                     <Line key={region} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={3} dot={false} connectNulls isAnimationActive={false} />
-                   ))}
-                 </LineChart>
-               )}
-             </div>
+        {/* Charts Section */}
+        <div className="mb-8 break-inside-avoid">
+          <h2 className="text-lg font-bold mb-4 text-gray-800 uppercase tracking-wider border-b-2 border-gray-200 pb-1">2. Temporal NDVI Analysis</h2>
+          <div className="border-2 border-gray-800 rounded-sm p-4 bg-white mx-auto flex justify-center" style={{ width: '100%', height: '320px' }}>
+            {printImages.comparison ? (
+              <img src={printImages.comparison} alt="Temporal Analysis Chart" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : (
+              <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="date" stroke="#374151" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+                <YAxis stroke="#374151" fontSize={11} domain={[0.2, 1]} tickFormatter={(val) => Number(val).toFixed(2)} width={35} />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }} />
+                {selectedRegions.map((region, idx) => (
+                  <Line key={region} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={3} dot={false} connectNulls isAnimationActive={false} />
+                ))}
+              </LineChart>
+            )}
           </div>
+        </div>
 
 
         {/* Off-screen Render Targets for Image Capture */}
         <div className="fixed top-0 left-[-9999px] opacity-0 pointer-events-none bg-white">
           <div id="render-comp-chart" style={{ width: '650px', height: '300px', padding: '10px' }}>
             <LineChart data={comparisonData} width={650} height={300} margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
-               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-               <XAxis dataKey="date" stroke="#374151" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
-               <YAxis stroke="#374151" fontSize={11} domain={[0.2, 1]} tickFormatter={(val) => Number(val).toFixed(2)} width={35} />
-               <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold' }} />
-               {selectedRegions.map((region, idx) => (
-                 <Line key={`render-${region}`} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={3} dot={false} connectNulls isAnimationActive={false} />
-               ))}
-             </LineChart>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis dataKey="date" stroke="#374151" fontSize={11} tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
+              <YAxis stroke="#374151" fontSize={11} domain={[0.2, 1]} tickFormatter={(val) => Number(val).toFixed(2)} width={35} />
+              <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold' }} />
+              {selectedRegions.map((region, idx) => (
+                <Line key={`render-${region}`} type="monotone" dataKey={region} stroke={COLORS[idx % COLORS.length]} strokeWidth={3} dot={false} connectNulls isAnimationActive={false} />
+              ))}
+            </LineChart>
           </div>
           <div id="render-bar-chart" style={{ width: '650px', height: '300px', padding: '10px' }}>
             <BarChart data={selectedRegions.map(r => ({
-                name: r,
-                Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
-                Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
-              }))} width={650} height={300} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+              name: r,
+              Average: allRegionsStats[r] ? parseFloat(allRegionsStats[r].avg) : 0,
+              Peak: allRegionsStats[r] ? parseFloat(allRegionsStats[r].max) : 0
+            }))} width={650} height={300} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
               <XAxis dataKey="name" stroke="#374151" fontSize={11} tickLine={false} axisLine={false} />
               <YAxis stroke="#374151" fontSize={11} domain={[0, 1]} tickLine={false} axisLine={false} />
