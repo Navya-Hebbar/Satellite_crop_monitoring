@@ -54,7 +54,8 @@ export const DataProvider = ({ children }) => {
   const fetchRegionData = async (regionName, start, end, buff) => {
     const { lat, lng } = regionDatabase[regionName];
     try {
-      const response = await fetch(`http://localhost:3001/api/ndvi?lat=${lat}&lng=${lng}&regionName=${regionName}&startDate=${start}&endDate=${end}&buffer=${buff}`);
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/api/ndvi?lat=${lat}&lng=${lng}&regionName=${regionName}&startDate=${start}&endDate=${end}&buffer=${buff}`);
       if (!response.ok) throw new Error('Backend offline');
       return await response.json();
     } catch (err) {

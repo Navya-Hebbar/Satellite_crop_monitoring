@@ -90,7 +90,8 @@ const Dashboard = () => {
   const generateAIReport = async () => {
     setIsGeneratingReport(true);
     try {
-      const response = await fetch('http://localhost:3001/api/generate-report', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/api/generate-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

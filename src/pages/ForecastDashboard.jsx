@@ -24,7 +24,7 @@ import RegionNdviComparisonChart from '../components/forecast/RegionNdviComparis
 import RegionNdviSummaryBar from '../components/forecast/RegionNdviSummaryBar';
 import ForecastMediaPanel from '../components/forecast/ForecastMediaPanel';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 function SummaryCard({ title, value, sub, icon: Icon, accent }) {

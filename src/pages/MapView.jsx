@@ -53,7 +53,8 @@ const MapView = () => {
     }
 
     try {
-      const geeRes = await fetch(`http://localhost:3001/api/ndvi?lat=${lat}&lng=${lng}&startDate=${dates.start}&endDate=${dates.end}&buffer=500`);
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const geeRes = await fetch(`${API_URL}/api/ndvi?lat=${lat}&lng=${lng}&startDate=${dates.start}&endDate=${dates.end}&buffer=500`);
       const geeData = await geeRes.json();
 
       if (geeData && geeData.length > 0) {
